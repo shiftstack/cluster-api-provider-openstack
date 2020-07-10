@@ -1,8 +1,6 @@
 package yaml
 
 import (
-	"encoding"
-	"fmt"
 	"reflect"
 	"regexp"
 	"sort"
@@ -22,7 +20,6 @@ func newEncoder() (e *encoder) {
 	e = &encoder{}
 	e.must(yaml_emitter_initialize(&e.emitter))
 	yaml_emitter_set_output_string(&e.emitter, &e.out)
-	yaml_emitter_set_unicode(&e.emitter, true)
 	e.must(yaml_stream_start_event_initialize(&e.event, yaml_UTF8_ENCODING))
 	e.emit()
 	e.must(yaml_document_start_event_initialize(&e.event, nil, nil, true))
@@ -53,9 +50,9 @@ func (e *encoder) must(ok bool) {
 	if !ok {
 		msg := e.emitter.problem
 		if msg == "" {
-			msg = "unknown problem generating YAML content"
+			msg = "Unknown problem generating YAML content"
 		}
-		failf("%s", msg)
+		fail(msg)
 	}
 }
 
@@ -64,23 +61,15 @@ func (e *encoder) marshal(tag string, in reflect.Value) {
 		e.nilv()
 		return
 	}
-	iface := in.Interface()
-	if m, ok := iface.(Marshaler); ok {
-		v, err := m.MarshalYAML()
-		if err != nil {
-			fail(err)
-		}
-		if v == nil {
+	var value interface{}
+	if getter, ok := in.Interface().(Getter); ok {
+		tag, value = getter.GetYAML()
+		tag = longTag(tag)
+		if value == nil {
 			e.nilv()
 			return
 		}
-		in = reflect.ValueOf(v)
-	} else if m, ok := iface.(encoding.TextMarshaler); ok {
-		text, err := m.MarshalText()
-		if err != nil {
-			fail(err)
-		}
-		in = reflect.ValueOf(string(text))
+		in = reflect.ValueOf(value)
 	}
 	switch in.Kind() {
 	case reflect.Interface:
@@ -100,16 +89,12 @@ func (e *encoder) marshal(tag string, in reflect.Value) {
 	case reflect.Struct:
 		e.structv(tag, in)
 	case reflect.Slice:
-		if in.Type().Elem() == mapItemType {
-			e.itemsv(tag, in)
-		} else {
-			e.slicev(tag, in)
-		}
+		e.slicev(tag, in)
 	case reflect.String:
 		e.stringv(tag, in)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		if in.Type() == durationType {
-			e.stringv(tag, reflect.ValueOf(iface.(time.Duration).String()))
+			e.stringv(tag, reflect.ValueOf(in.Interface().(time.Duration).String()))
 		} else {
 			e.intv(tag, in)
 		}
@@ -120,7 +105,7 @@ func (e *encoder) marshal(tag string, in reflect.Value) {
 	case reflect.Bool:
 		e.boolv(tag, in)
 	default:
-		panic("cannot marshal type: " + in.Type().String())
+		panic("Can't marshal type: " + in.Type().String())
 	}
 }
 
@@ -131,16 +116,6 @@ func (e *encoder) mapv(tag string, in reflect.Value) {
 		for _, k := range keys {
 			e.marshal("", k)
 			e.marshal("", in.MapIndex(k))
-		}
-	})
-}
-
-func (e *encoder) itemsv(tag string, in reflect.Value) {
-	e.mappingv(tag, func() {
-		slice := in.Convert(reflect.TypeOf([]MapItem{})).Interface().([]MapItem)
-		for _, item := range slice {
-			e.marshal("", reflect.ValueOf(item.Key))
-			e.marshal("", reflect.ValueOf(item.Value))
 		}
 	})
 }
@@ -164,22 +139,6 @@ func (e *encoder) structv(tag string, in reflect.Value) {
 			e.marshal("", reflect.ValueOf(info.Key))
 			e.flow = info.Flow
 			e.marshal("", value)
-		}
-		if sinfo.InlineMap >= 0 {
-			m := in.Field(sinfo.InlineMap)
-			if m.Len() > 0 {
-				e.flow = false
-				keys := keyList(m.MapKeys())
-				sort.Sort(keys)
-				for _, k := range keys {
-					if _, found := sinfo.FieldsMap[k.String()]; found {
-						panic(fmt.Sprintf("Can't have key %q in inlined map; conflicts with struct field", k.String()))
-					}
-					e.marshal("", k)
-					e.flow = false
-					e.marshal("", m.MapIndex(k))
-				}
-			}
 		}
 	})
 }
@@ -246,9 +205,9 @@ func (e *encoder) stringv(tag string, in reflect.Value) {
 			tag = rtag
 			s = rs.(string)
 		} else if tag == yaml_BINARY_TAG {
-			failf("explicitly tagged !!binary data must be base64-encoded")
+			fail("explicitly tagged !!binary data must be base64-encoded")
 		} else {
-			failf("cannot marshal invalid UTF-8 data as %s", shortTag(tag))
+			fail("cannot marshal invalid UTF-8 data as " + shortTag(tag))
 		}
 	}
 	if tag == "" && (rtag != yaml_STR_TAG || isBase60Float(s)) {
