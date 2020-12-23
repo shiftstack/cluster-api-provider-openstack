@@ -424,6 +424,11 @@ func getIPsFromInstance(instance *clients.Instance) (map[string]string, error) {
 			"": instance.AccessIPv4,
 		}, nil
 	}
+	if instance.AccessIPv6 != "" && net.ParseIP(instance.AccessIPv6) != nil {
+		return map[string]string{
+			"": instance.AccessIPv6,
+		}, nil
+	}
 	type networkInterface struct {
 		Address string  `json:"addr"`
 		Version float64 `json:"version"`
@@ -442,9 +447,7 @@ func getIPsFromInstance(instance *clients.Instance) (map[string]string, error) {
 			var netInterface networkInterface
 			b, _ := json.Marshal(network)
 			json.Unmarshal(b, &netInterface)
-			if netInterface.Version == 4.0 {
-				addrMap[networkName] = netInterface.Address
-			}
+			addrMap[networkName] = netInterface.Address
 		}
 	}
 	if len(addrMap) == 0 {
