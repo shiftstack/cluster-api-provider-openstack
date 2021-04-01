@@ -92,3 +92,7 @@ func NewService(client *gophercloud.ProviderClient, clientOpts *clientconfig.Cli
 		logger:         logger,
 	}, nil
 }
+
+func (s *Service) HackGetComputeClient() *gophercloud.ServiceClient {
+	return s.computeClient
+}
