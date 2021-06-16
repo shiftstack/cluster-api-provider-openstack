@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
+	"google.golang.org/api/compute/v1"
 
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/kubernetes"
@@ -59,6 +60,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	openstackconfigv1 "sigs.k8s.io/cluster-api-provider-openstack/pkg/apis/openstackproviderconfig/v1alpha1"
+
+	"sigs.k8s.io/cluster-api-provider-openstack/pkg/cloud/services/compute"
 )
 
 const (
@@ -93,6 +96,8 @@ type InstanceService struct {
 
 	regionName string
 }
+
+func (InstanceService) ToAlpha4Service(projectID string) (*compute.Service, error)
 
 type Instance struct {
 	servers.Server

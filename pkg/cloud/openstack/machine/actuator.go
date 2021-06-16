@@ -43,6 +43,7 @@ import (
 	tokenutil "k8s.io/cluster-bootstrap/token/util"
 	"k8s.io/klog/v2"
 	openstackconfigv1 "sigs.k8s.io/cluster-api-provider-openstack/pkg/apis/openstackproviderconfig/v1alpha1"
+	"sigs.k8s.io/cluster-api-provider-openstack/pkg/apis/openstackproviderconfig/v1alpha1/types"
 	"sigs.k8s.io/cluster-api-provider-openstack/pkg/bootstrap"
 	"sigs.k8s.io/cluster-api-provider-openstack/pkg/cloud/openstack"
 	"sigs.k8s.io/cluster-api-provider-openstack/pkg/cloud/openstack/clients"
@@ -255,6 +256,21 @@ func (oc *OpenstackClient) Create(ctx context.Context, machine *machinev1.Machin
 			return fmt.Errorf("Postprocessor error: unknown postprocessor: '%s'", postprocessor)
 		}
 	}
+
+	// Convert to v1alpha4
+	v4Service, err := machineService.ToAlpha4Service("")
+	if err != nil {
+		return err
+	}
+	v4Machine, err := types.NewAlpha4OpenStackMachine(providerSpec)
+	if err != nil {
+		return err
+	}
+	v4Cluster, err := types.NewAlpha4OpenStackCluster(clusterSpec, types.OpenstackClusterProviderStatus{})
+	if err != nil {
+		return err
+	}
+	inst, err := v4Service.CreateInstance(v4Cluster, machine, v4Machine, clusterName, userDataRendered)
 
 	instance, err = machineService.InstanceCreate(clusterName, machine.Name, &clusterSpec, providerSpec, userDataRendered, providerSpec.KeyName, oc.params.ConfigClient)
 
