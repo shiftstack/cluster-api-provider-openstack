@@ -135,9 +135,10 @@ type NetworkParam struct {
 	// NoAllowedAddressPairs disables creation of allowed address pairs for the network ports
 	NoAllowedAddressPairs bool `json:"noAllowedAddressPairs,omitempty"`
 	// PortTags allows users to specify a list of tags to add to ports created in a given network
-	PortTags []string          `json:"portTags,omitempty"`
-	VNICType string            `json:"vnicType,omitempty"`
-	Profile  map[string]string `json:"profile,omitempty"`
+	PortTags    []string          `json:"portTags,omitempty"`
+	VNICType    string            `json:"vnicType,omitempty"`
+	Profile     map[string]string `json:"profile,omitempty"`
+	QoSPolicyID string            `json:"qosPolicyID,omitempty"`
 	// PortSecurity optionally enables or disables security on ports managed by OpenStack
 	PortSecurity *bool `json:"portSecurity,omitempty"`
 }
@@ -223,6 +224,9 @@ type PortOpts struct {
 	// host to pass and receive virtual network interface (VIF) port-specific
 	// information to the plug-in.
 	Profile map[string]string `json:"profile,omitempty"`
+
+	// A string for the QoS policy ID of the network where this port is plugged.
+	QoSPolicyID string `json:"qosPolicyID,omitempty"`
 
 	// enable or disable security on a given port
 	// incompatible with securityGroups and allowedAddressPairs

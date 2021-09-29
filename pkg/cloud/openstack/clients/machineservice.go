@@ -44,6 +44,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/attributestags"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/portsbinding"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/portsecurity"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/qos/policies"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/trunks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
@@ -344,8 +345,27 @@ func getOrCreatePort(is *InstanceService, name string, portOpts openstackconfigv
 	if err != nil {
 		return nil, err
 	}
+
+	var fixedIPs interface{}
+	if len(portOpts.FixedIPs) != 0 {
+		fixedIPs := make([]ports.IP, len(portOpts.FixedIPs))
+		for i, portOptIP := range portOpts.FixedIPs {
+			fixedIPs[i].SubnetID = portOptIP.SubnetID
+			fixedIPs[i].IPAddress = portOptIP.IPAddress
+		}
+	}
+
+	addressPairs := []ports.AddressPair{}
+	for _, ap := range portOpts.AllowedAddressPairs {
+		addressPairs = append(addressPairs, ports.AddressPair{
+			IPAddress:  ap.IPAddress,
+			MACAddress: ap.MACAddress,
+		})
+	}
+
 	if len(existingPorts) == 0 {
-		createOpts := ports.CreateOpts{
+		var createOpts ports.CreateOptsBuilder
+		createOpts = ports.CreateOpts{
 			Name:                portName,
 			NetworkID:           portOpts.NetworkID,
 			Description:         portOpts.Description,
@@ -354,22 +374,16 @@ func getOrCreatePort(is *InstanceService, name string, portOpts openstackconfigv
 			TenantID:            portOpts.TenantID,
 			ProjectID:           portOpts.ProjectID,
 			SecurityGroups:      portOpts.SecurityGroups,
-			AllowedAddressPairs: []ports.AddressPair{},
+			AllowedAddressPairs: addressPairs,
+			FixedIPs:            fixedIPs,
 		}
 
-		for _, ap := range portOpts.AllowedAddressPairs {
-			createOpts.AllowedAddressPairs = append(createOpts.AllowedAddressPairs, ports.AddressPair{
-				IPAddress:  ap.IPAddress,
-				MACAddress: ap.MACAddress,
-			})
-		}
-		if len(portOpts.FixedIPs) != 0 {
-			fixedIPs := make([]ports.IP, len(portOpts.FixedIPs))
-			for i, portOptIP := range portOpts.FixedIPs {
-				fixedIPs[i].SubnetID = portOptIP.SubnetID
-				fixedIPs[i].IPAddress = portOptIP.IPAddress
+		if portOpts.QoSPolicyID != "" {
+			policyID := portOpts.QoSPolicyID
+			createOpts = policies.PortCreateOptsExt{
+				CreateOptsBuilder: createOpts,
+				QoSPolicyID:       policyID,
 			}
-			createOpts.FixedIPs = fixedIPs
 		}
 		newPort, err := ports.Create(is.networkClient, portsbinding.CreateOptsExt{
 			CreateOptsBuilder: createOpts,
@@ -588,6 +602,7 @@ func (is *InstanceService) InstanceCreate(clusterName string, name string, clust
 					Tags:         net.PortTags,
 					VNICType:     net.VNICType,
 					Profile:      net.Profile,
+					QoSPolicyID:  net.QoSPolicyID,
 					PortSecurity: net.PortSecurity,
 				})
 			}
@@ -615,6 +630,7 @@ func (is *InstanceService) InstanceCreate(clusterName string, name string, clust
 						Tags:         append(net.PortTags, snetParam.PortTags...),
 						VNICType:     net.VNICType,
 						Profile:      net.Profile,
+						QoSPolicyID:  net.QoSPolicyID,
 						PortSecurity: portSecurity,
 					})
 				}
