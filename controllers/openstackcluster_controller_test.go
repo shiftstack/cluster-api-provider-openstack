@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,14 +33,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrav1 "sigs.k8s.io/cluster-api-provider-openstack/api/v1alpha6"
+	"sigs.k8s.io/cluster-api-provider-openstack/pkg/scope"
 )
 
 var (
-	reconciler    OpenStackClusterReconciler
-	ctx           context.Context
-	testCluster   *infrav1.OpenStackCluster
-	capiCluster   *clusterv1.Cluster
-	testNamespace string
+	reconciler       *OpenStackClusterReconciler
+	ctx              context.Context
+	testCluster      *infrav1.OpenStackCluster
+	capiCluster      *clusterv1.Cluster
+	testNamespace    string
+	mockCtrl         *gomock.Controller
+	mockScopeFactory *scope.MockScopeFactory
 )
 
 var _ = Describe("OpenStackCluster controller", func() {
@@ -49,9 +53,6 @@ var _ = Describe("OpenStackCluster controller", func() {
 
 	BeforeEach(func() {
 		ctx = context.TODO()
-		reconciler = OpenStackClusterReconciler{
-			Client: k8sClient,
-		}
 		testNum++
 		testNamespace = fmt.Sprintf("test-%d", testNum)
 
@@ -91,6 +92,15 @@ var _ = Describe("OpenStackCluster controller", func() {
 			Name:    testNamespace,
 		}
 		framework.CreateNamespace(ctx, input)
+
+		mockCtrl = gomock.NewController(GinkgoT())
+		mockScopeFactory = scope.NewMockScopeFactory(mockCtrl)
+		reconciler = func() *OpenStackClusterReconciler {
+			return &OpenStackClusterReconciler{
+				Client:       k8sClient,
+				ScopeFactory: mockScopeFactory,
+			}
+		}()
 	})
 
 	AfterEach(func() {
@@ -160,9 +170,12 @@ var _ = Describe("OpenStackCluster controller", func() {
 		Expect(err).To(BeNil())
 		req := createRequestFromOSCluster(testCluster)
 
+		clientCreateErr := fmt.Errorf("Test failure")
+		mockScopeFactory.SetClientScopeCreateError(clientCreateErr)
+
 		result, err := reconciler.Reconcile(ctx, req)
 		// Expect error for getting OS clinet and empty result
-		Expect(err).ToNot(BeNil())
+		Expect(err).To(MatchError(clientCreateErr))
 		Expect(result).To(Equal(reconcile.Result{}))
 	})
 
