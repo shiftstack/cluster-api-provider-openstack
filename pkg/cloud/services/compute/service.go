@@ -32,7 +32,7 @@ type Service struct {
 
 // NewService returns an instance of the compute service.
 func NewService(scope *scope.Scope) (*Service, error) {
-	computeService, err := clients.NewComputeClient(scope)
+	computeService, err := clients.NewComputeClient(scope.ProviderClient, scope.ProviderClientOpts)
 	if err != nil {
 		return nil, err
 	}

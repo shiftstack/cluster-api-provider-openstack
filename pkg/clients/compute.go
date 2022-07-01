@@ -26,10 +26,10 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/availabilityzones"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
+	"github.com/gophercloud/utils/openstack/clientconfig"
 	"github.com/gophercloud/utils/openstack/compute/v2/flavors"
 
 	"sigs.k8s.io/cluster-api-provider-openstack/pkg/metrics"
-	"sigs.k8s.io/cluster-api-provider-openstack/pkg/scope"
 )
 
 /*
@@ -76,24 +76,24 @@ type computeClient struct {
 }
 
 // NewComputeClient returns a new compute client.
-func NewComputeClient(scope *scope.Scope) (ComputeClient, error) {
-	compute, err := openstack.NewComputeV2(scope.ProviderClient, gophercloud.EndpointOpts{
-		Region: scope.ProviderClientOpts.RegionName,
+func NewComputeClient(providerClient *gophercloud.ProviderClient, providerClientOpts *clientconfig.ClientOpts) (ComputeClient, error) {
+	compute, err := openstack.NewComputeV2(providerClient, gophercloud.EndpointOpts{
+		Region: providerClientOpts.RegionName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create compute service client: %v", err)
 	}
 	compute.Microversion = NovaMinimumMicroversion
 
-	images, err := openstack.NewImageServiceV2(scope.ProviderClient, gophercloud.EndpointOpts{
-		Region: scope.ProviderClientOpts.RegionName,
+	images, err := openstack.NewImageServiceV2(providerClient, gophercloud.EndpointOpts{
+		Region: providerClientOpts.RegionName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create image service client: %v", err)
 	}
 
-	volume, err := openstack.NewBlockStorageV3(scope.ProviderClient, gophercloud.EndpointOpts{
-		Region: scope.ProviderClientOpts.RegionName,
+	volume, err := openstack.NewBlockStorageV3(providerClient, gophercloud.EndpointOpts{
+		Region: providerClientOpts.RegionName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create volume service client: %v", err)
