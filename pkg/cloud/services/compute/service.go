@@ -25,20 +25,16 @@ import (
 )
 
 type Service struct {
-	scope             *scope.Scope
+	scope             scope.Scope
 	computeService    clients.ComputeClient
 	networkingService *networking.Service
 }
 
 // NewService returns an instance of the compute service.
-func NewService(scope *scope.Scope) (*Service, error) {
-	computeService, err := clients.NewComputeClient(scope.ProviderClient, scope.ProviderClientOpts)
+func NewService(scope scope.ClientGeneratorScope) (*Service, error) {
+	computeService, err := scope.NewComputeClient()
 	if err != nil {
 		return nil, err
-	}
-
-	if scope.ProviderClientOpts.AuthInfo == nil {
-		return nil, fmt.Errorf("authInfo must be set")
 	}
 
 	networkingService, err := networking.NewService(scope)

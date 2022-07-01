@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-logr/logr"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
@@ -35,6 +36,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	infrav1 "sigs.k8s.io/cluster-api-provider-openstack/api/v1alpha6"
+	"sigs.k8s.io/cluster-api-provider-openstack/pkg/clients"
 )
 
 const (
@@ -42,7 +44,12 @@ const (
 	caSecretKey     = "cacert"
 )
 
-func NewClientFromMachine(ctx context.Context, ctrlClient client.Client, openStackMachine *infrav1.OpenStackMachine) (*gophercloud.ProviderClient, *clientconfig.ClientOpts, string, error) {
+// ProviderScopeFactory is the default scope factory. It generates service clients which make OpenStack API calls against a running cloud.
+var ProviderScopeFactory Factory = providerScopeFactory{}
+
+type providerScopeFactory struct{}
+
+func (providerScopeFactory) NewClientScopeFromMachine(ctx context.Context, ctrlClient client.Client, openStackMachine *infrav1.OpenStackMachine, logger logr.Logger) (ClientGeneratorScope, error) {
 	var cloud clientconfig.Cloud
 	var caCert []byte
 
@@ -50,13 +57,13 @@ func NewClientFromMachine(ctx context.Context, ctrlClient client.Client, openSta
 		var err error
 		cloud, caCert, err = getCloudFromSecret(ctx, ctrlClient, openStackMachine.Namespace, openStackMachine.Spec.IdentityRef.Name, openStackMachine.Spec.CloudName)
 		if err != nil {
-			return nil, nil, "", err
+			return nil, err
 		}
 	}
-	return NewProviderClient(cloud, caCert)
+	return newProviderScope(cloud, caCert, logger)
 }
 
-func NewClientFromCluster(ctx context.Context, ctrlClient client.Client, openStackCluster *infrav1.OpenStackCluster) (*gophercloud.ProviderClient, *clientconfig.ClientOpts, string, error) {
+func (providerScopeFactory) NewClientScopeFromCluster(ctx context.Context, ctrlClient client.Client, openStackCluster *infrav1.OpenStackCluster, logger logr.Logger) (ClientGeneratorScope, error) {
 	var cloud clientconfig.Cloud
 	var caCert []byte
 
@@ -64,10 +71,10 @@ func NewClientFromCluster(ctx context.Context, ctrlClient client.Client, openSta
 		var err error
 		cloud, caCert, err = getCloudFromSecret(ctx, ctrlClient, openStackCluster.Namespace, openStackCluster.Spec.IdentityRef.Name, openStackCluster.Spec.CloudName)
 		if err != nil {
-			return nil, nil, "", err
+			return nil, err
 		}
 	}
-	return NewProviderClient(cloud, caCert)
+	return newProviderScope(cloud, caCert, logger)
 }
 
 func NewProviderClient(cloud clientconfig.Cloud, caCert []byte) (*gophercloud.ProviderClient, *clientconfig.ClientOpts, string, error) {
@@ -183,4 +190,38 @@ func getProjectIDFromAuthResult(authResult gophercloud.AuthResult) (string, erro
 	default:
 		return "", fmt.Errorf("unable to get the project id from auth response with type %T", authResult)
 	}
+}
+
+type providerScope struct {
+	providerClient     *gophercloud.ProviderClient
+	providerClientOpts *clientconfig.ClientOpts
+	baseScope
+}
+
+func newProviderScope(cloud clientconfig.Cloud, caCert []byte, logger logr.Logger) (ClientGeneratorScope, error) {
+	providerClient, clientOpts, projectID, err := NewProviderClient(cloud, caCert)
+	if err != nil {
+		return nil, err
+	}
+
+	return &providerScope{
+		providerClient:     providerClient,
+		providerClientOpts: clientOpts,
+		baseScope: baseScope{
+			projectID: projectID,
+			logger:    logger,
+		},
+	}, nil
+}
+
+func (s *providerScope) NewComputeClient() (clients.ComputeClient, error) {
+	return clients.NewComputeClient(s.providerClient, s.providerClientOpts)
+}
+
+func (s *providerScope) NewNetworkClient() (clients.NetworkClient, error) {
+	return clients.NewNetworkClient(s.providerClient, s.providerClientOpts)
+}
+
+func (s *providerScope) NewLbClient() (clients.LbClient, error) {
+	return clients.NewLbClient(s.providerClient, s.providerClientOpts)
 }

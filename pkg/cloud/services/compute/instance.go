@@ -151,7 +151,7 @@ func (s *Service) createInstanceImpl(eventObject runtime.Object, openStackCluste
 		}
 
 		if err := s.deletePorts(eventObject, portList); err != nil {
-			s.scope.Logger.V(4).Error(err, "Failed to clean up ports after failure")
+			s.scope.Logger().V(4).Error(err, "Failed to clean up ports after failure")
 		}
 	}()
 
@@ -298,7 +298,7 @@ func (s *Service) getVolumeByName(name string) (*volumes.Volume, error) {
 	listOpts := volumes.ListOpts{
 		AllTenants: false,
 		Name:       name,
-		TenantID:   s.scope.ProjectID,
+		TenantID:   s.scope.ProjectID(),
 	}
 	volumeList, err := s.computeService.ListVolumes(listOpts)
 	if err != nil {
@@ -331,7 +331,7 @@ func (s *Service) getOrCreateRootVolume(eventObject runtime.Object, instanceSpec
 			return nil, fmt.Errorf("exected to find volume %s with size %d; found size %d", name, size, volume.Size)
 		}
 
-		s.scope.Logger.Info("using existing root volume %s", name)
+		s.scope.Logger().Info("using existing root volume %s", name)
 		return volume, nil
 	}
 
@@ -546,7 +546,7 @@ func (s *Service) DeleteInstance(eventObject runtime.Object, instanceSpec *Insta
 				return nil
 			}
 
-			s.scope.Logger.Info("deleting dangling root volume %s(%s)", volume.Name, volume.ID)
+			s.scope.Logger().Info("deleting dangling root volume %s(%s)", volume.Name, volume.ID)
 			return s.computeService.DeleteVolume(volume.ID, volumes.DeleteOpts{})
 		}
 
@@ -671,7 +671,7 @@ func (s *Service) GetInstanceStatus(resourceID string) (instance *InstanceStatus
 		return nil, fmt.Errorf("get server %q detail failed: %v", resourceID, err)
 	}
 
-	return &InstanceStatus{server, s.scope.Logger}, nil
+	return &InstanceStatus{server, s.scope.Logger()}, nil
 }
 
 func (s *Service) GetInstanceStatusByName(eventObject runtime.Object, name string) (instance *InstanceStatus, err error) {
@@ -698,7 +698,7 @@ func (s *Service) GetInstanceStatusByName(eventObject runtime.Object, name strin
 
 	// Return the first returned server, if any
 	for i := range serverList {
-		return &InstanceStatus{&serverList[i], s.scope.Logger}, nil
+		return &InstanceStatus{&serverList[i], s.scope.Logger()}, nil
 	}
 	return nil, nil
 }
