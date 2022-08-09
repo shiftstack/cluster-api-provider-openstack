@@ -79,7 +79,7 @@ func (r *OpenStackClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return reconcile.Result{}, err
 	}
 
-	// Fetch the Cluster.
+	// Fetch the Cluster
 	cluster, err := util.GetOwnerCluster(ctx, r.Client, openStackCluster.ObjectMeta)
 	if err != nil {
 		return reconcile.Result{}, err

@@ -22,8 +22,13 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/availabilityzones"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -182,6 +187,127 @@ var _ = Describe("OpenStackCluster controller", func() {
 		Expect(err).To(MatchError(clientCreateErr))
 		Expect(result).To(Equal(reconcile.Result{}))
 	})
+	It("should be able to reconcile when bastion is disabled and does not exist", func() {
+		testCluster.SetName("success")
+		testCluster.Spec = infrav1.OpenStackClusterSpec{
+			// We disable the floating IP and configure a fixed IP instead as
+			// this involves far less logic
+			DisableAPIServerFloatingIP: true,
+			APIServerFixedIP: "123.123.123.123",
+			Bastion: &infrav1.Bastion{
+				Enabled: false,
+			},
+		}
+		err := k8sClient.Create(ctx, testCluster)
+		Expect(err).To(BeNil())
+		err = k8sClient.Create(ctx, capiCluster)
+		Expect(err).To(BeNil())
+		req := createRequestFromOSCluster(testCluster)
+
+		testNetwork := networks.Network{
+			ID:      "63283cc3-ff74-4873-b5da-ab0e34d7f8af",
+			Name:    "network-a",
+			Subnets: []string{"073c1ed5-f46a-4ffc-b857-ee30835b89ec"},
+			Tags:    []string{},
+		}
+		testSubnet := subnets.Subnet{
+			ID:        "073c1ed5-f46a-4ffc-b857-ee30835b89ec",
+			Name:      "subnet-a",
+			NetworkID: "63283cc3-ff74-4873-b5da-ab0e34d7f8af",
+			Tags:      []string{},
+		}
+
+		computeClientRecorder := mockScopeFactory.ComputeClient.EXPECT()
+		computeClientRecorder.ListServers(servers.ListOpts{
+			Name: "^capi-cluster-bastion$",
+		}).Return([]clients.ServerExt{}, nil)
+		computeClientRecorder.ListAvailabilityZones().Return([]availabilityzones.AvailabilityZone{}, nil)
+
+		networkClientRecorder := mockScopeFactory.NetworkClient.EXPECT()
+		networkClientRecorder.ListNetwork(gomock.Any()).Return([]networks.Network{testNetwork}, nil)
+		networkClientRecorder.ListNetwork(gomock.Any()).Return([]networks.Network{testNetwork}, nil)
+		networkClientRecorder.ListSubnet(gomock.Any()).Return([]subnets.Subnet{testSubnet}, nil)
+		networkClientRecorder.ListSecGroup(gomock.Any()).Return([]groups.SecGroup{}, nil)
+
+		result, err := reconciler.Reconcile(ctx, req)
+		// Expect error for getting OS client and empty result
+		Expect(err).To(BeNil())
+		Expect(result).To(Equal(reconcile.Result{}))
+	})
+	It("should be able to reconcile when bastion is enabled", func() {
+		testCluster.SetName("success")
+		testCluster.Spec = infrav1.OpenStackClusterSpec{
+			// We disable the floating IP and configure a fixed IP instead as
+			// this involves far less logic
+			DisableAPIServerFloatingIP: true,
+			APIServerFixedIP: "123.123.123.123",
+			Bastion: &infrav1.Bastion{
+				Instance: infrav1.OpenStackMachineSpec{
+					FloatingIP: "192.168.6.7",
+				},
+				Enabled: true,
+			},
+		}
+		err := k8sClient.Create(ctx, testCluster)
+		Expect(err).To(BeNil())
+		err = k8sClient.Create(ctx, capiCluster)
+		Expect(err).To(BeNil())
+		req := createRequestFromOSCluster(testCluster)
+
+		testNetwork := networks.Network{
+			ID:      "63283cc3-ff74-4873-b5da-ab0e34d7f8af",
+			Name:    "network-a",
+			Subnets: []string{"073c1ed5-f46a-4ffc-b857-ee30835b89ec"},
+			Tags:    []string{},
+		}
+		testSubnet := subnets.Subnet{
+			ID:        "073c1ed5-f46a-4ffc-b857-ee30835b89ec",
+			Name:      "subnet-a",
+			NetworkID: "63283cc3-ff74-4873-b5da-ab0e34d7f8af",
+			Tags:      []string{},
+		}
+		testPort := ports.Port{
+			ID:        "b32b70e8-184c-4315-b9a0-2fa3b109f20c",
+			NetworkID: "63283cc3-ff74-4873-b5da-ab0e34d7f8af",
+		}
+		testServer := &clients.ServerExt{
+			Server: servers.Server{
+				ID:     "34328901-f687-49c6-8ff3-4d925bcc9f40",
+				Name:   "test-machine-name",
+				Status: "ACTIVE",
+			},
+			ServerAvailabilityZoneExt: availabilityzones.ServerAvailabilityZoneExt{},
+		}
+		testFIP := floatingips.FloatingIP{
+			ID:         "a72e142c-9e9e-4e65-9181-63a0190c8d0a",
+			FloatingIP: "192.168.6.7",
+			PortID:     "b32b70e8-184c-4315-b9a0-2fa3b109f20c",
+		}
+
+		computeClientRecorder := mockScopeFactory.ComputeClient.EXPECT()
+		computeClientRecorder.ListServers(servers.ListOpts{
+			Name: "^capi-cluster-bastion$",
+		}).Return([]clients.ServerExt{}, nil)
+		computeClientRecorder.GetFlavorIDFromName("").Return("65505300-e33f-4882-a8e2-638b846e1c47", nil)
+		computeClientRecorder.ListAvailabilityZones().Return([]availabilityzones.AvailabilityZone{}, nil)
+		computeClientRecorder.CreateServer(gomock.Any()).Return(testServer, nil)
+		computeClientRecorder.GetServer("34328901-f687-49c6-8ff3-4d925bcc9f40").Return(testServer, nil)
+
+		networkClientRecorder := mockScopeFactory.NetworkClient.EXPECT()
+		networkClientRecorder.ListNetwork(gomock.Any()).Return([]networks.Network{testNetwork}, nil)
+		networkClientRecorder.ListNetwork(gomock.Any()).Return([]networks.Network{testNetwork}, nil)
+		networkClientRecorder.ListSubnet(gomock.Any()).Return([]subnets.Subnet{testSubnet}, nil)
+		networkClientRecorder.ListSecGroup(gomock.Any()).Return([]groups.SecGroup{}, nil)
+		networkClientRecorder.ListPort(gomock.Any()).Return([]ports.Port{testPort}, nil)
+		networkClientRecorder.ListFloatingIP(gomock.Any()).Return([]floatingips.FloatingIP{testFIP}, nil)
+		networkClientRecorder.ListPort(gomock.Any()).Return([]ports.Port{testPort}, nil)
+
+		result, err := reconciler.Reconcile(ctx, req)
+		// Expect error for getting OS client and empty result
+		Expect(err).To(BeNil())
+		Expect(result).To(Equal(reconcile.Result{}))
+	})
+	// TODO: I need to move this to a different test case. How?
 	It("should be able to reconcile when bastion is disabled and does not exist", func() {
 		testCluster.SetName("no-bastion")
 		testCluster.Spec = infrav1.OpenStackClusterSpec{
