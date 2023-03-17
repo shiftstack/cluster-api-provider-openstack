@@ -1,0 +1,35 @@
+# See https://cloud.google.com/cloud-build/docs/build-config
+timeout: 7200s
+options:
+  substitution_option: ALLOW_LOOSE
+  machineType: 'N1_STANDARD_8'
+steps:
+  - name: 'docker'
+    script: |
+      apk add --update bash git make
+      make ubuntu-2004-1.26
+    waitFor: ['-']
+    id: 'ubuntu-2004-1.26'
+  - name: 'docker'
+    script: |
+      apk add --update bash git make
+      make ubuntu-2004-1.25
+    waitFor: ['-']
+    id: 'ubuntu-2004-1.25'
+  - name: 'docker'
+    script: |
+      apk add --update bash git make
+      make flatcar-1.25
+    waitFor: ['-']
+    id: 'flatcar-1.25'
+  - name: 'docker'
+    script: |
+      apk add --update bash git make
+      make flatcar-1.26
+    waitFor: ['-']
+    id: 'flatcar-1.26'
+  - name: 'gcr.io/k8s-staging-test-infra/gcb-docker-gcloud:latest'
+    waitFor: ['flatcar-1.26']
+    script: |
+      echo upload to gcs
+      ls ./docker-output

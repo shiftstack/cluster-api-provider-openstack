@@ -498,7 +498,6 @@ clean-temporary: ## Remove all temporary files and folders
 	rm -f minikube.kubeconfig
 	rm -f kubeconfig
 	rm -rf _artifacts
-	rm -rf images
 
 .PHONY: clean-release
 clean-release: ## Remove the release folder
@@ -530,23 +529,3 @@ compile-e2e: ## Test e2e compilation
 
 .PHONY: FORCE
 FORCE:
-
-.PHONY: flatcar-1.26
-flatcar-1.26: ## build flatcar images using latest Stable release
-	@mkdir --parents ./docker-output
-	@docker run -v "${PWD}/docker-output:/output" --rm -e PACKER_LOG=1 -e PACKER_FLAGS="--var 'boot_wait=300s' --var 'accelerator=none' --var 'kubernetes_semver=v1.26.2' --var 'kubernetes_series=v1.26'" -e OEM_ID=openstack tormath1/cluster-node-image-builder-amd64 build-qemu-flatcar
-
-.PHONY: flatcar-1.25
-flatcar-1.25: ## build flatcar images using latest Stable release
-	@mkdir --parents ./docker-output
-	@docker run -v "${PWD}/docker-output:/output" --rm -e PACKER_LOG=1 -e PACKER_FLAGS="--var 'boot_wait=300s' --var 'accelerator=none' --var 'kubernetes_semver=v1.25.7' --var 'kubernetes_series=v1.25'" -e OEM_ID=openstack tormath1/cluster-node-image-builder-amd64 build-qemu-flatcar
-
-.PHONY: ubuntu-1.26
-ubuntu-2004-1.26: ## build ubuntu images
-	@mkdir --parents ./docker-output
-	@docker run -v "${PWD}/docker-output:/output" --rm -e PACKER_LOG=1 -e PACKER_FLAGS="--var 'boot_wait=20s' --var 'accelerator=none' --var 'kubernetes_semver=v1.26.2' --var 'kubernetes_series=v1.26'" tormath1/cluster-node-image-builder-amd64 build-qemu-ubuntu-2004
-
-.PHONY: ubuntu-1.25
-ubuntu-2004-1.25: ## build ubuntu images
-	@mkdir --parents ./docker-output
-	@docker run -v "${PWD}/docker-output:/output" --rm -e PACKER_LOG=1 -e PACKER_FLAGS="--var 'boot_wait=20s' --var 'accelerator=none' --var 'kubernetes_semver=v1.25.7' --var 'kubernetes_series=v1.25'" tormath1/cluster-node-image-builder-amd64 build-qemu-ubuntu-2004
