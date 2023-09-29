@@ -218,16 +218,28 @@ profile:
 
 We now have the ability for a machine to have additional block devices to be attached.
 
-Here is an example on how to use `additionalBlockDevices` for adding additional Cinder volumes attached
+Here is an example on how to use `additionalBlockDevices` for adding an additional Cinder volume attached
 to the server instance:
 
 ```yaml
 additionalBlockDevices:
 - name: database
-  size: 50
+  type: volume
+  diskSize: 50
   volumeType: my-volume-type
   availabilityZone: az0
 ```
+
+Here is an example on how to attach a ephemeral disk to the instance:
+
+```yaml
+- name: disk1
+  type: local
+  diskSize: 1
+```
+
+Adding more than one ephemeral disk to an instance is possible but you should use it at your own risks, it has been
+known to cause some issues in some environments.
 
 ### `OpenStackCluster`
 

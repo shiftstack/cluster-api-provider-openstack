@@ -16,6 +16,18 @@ limitations under the License.
 
 package v1alpha7
 
+// BlockDeviceType defines the type of block device to create.
+// +kubebuilder:validation:Enum=volume;local
+type BlockDeviceType string
+
+const (
+	// LocalBlockDevice is an ephemeral block deviced attached to the server.
+	LocalBlockDevice BlockDeviceType = "local"
+
+	// VolumeBlockDevice is a volume block device attached to the server.
+	VolumeBlockDevice BlockDeviceType = "volume"
+)
+
 // OpenStackMachineTemplateResource describes the data needed to create a OpenStackMachine from a template.
 type OpenStackMachineTemplateResource struct {
 	// Spec is the specification of the desired behavior of the machine.
@@ -163,17 +175,32 @@ type RootVolume struct {
 	AvailabilityZone string `json:"availabilityZone,omitempty"`
 }
 
+// AdditionalBlockDevice is a block device to attach to the server.
 type AdditionalBlockDevice struct {
-	// Name of the Cinder volume in the context of a machine.
-	// It will be combined with the machine name to make the actual volume name.
+	// Type is the type of block device to create.
+	// This can be either "volume" or "local".
+	// +kubebuilder:validation:Required
+	// +unionDiscriminator
+	Type BlockDeviceType `json:"type"`
+
+	// Name of the block device in the context of a machine.
+	// It will be combined with the machine name to make the actual cinder
+	// volume name, and will be used for tagging the block device.
 	Name string `json:"name"`
-	// Size is the size in GB of the volume.
+
+	// Size is the size in GB of the block device.
 	Size int `json:"diskSize"`
+
 	// VolumeType is the volume type of the volume.
 	// If omitted, the default type will be used.
+	// +unionMember=volume,optional
+	// +optional
 	VolumeType string `json:"volumeType,omitempty"`
+
 	// AvailabilityZone is the volume availability zone to create the volume in.
 	// If omitted, the availability zone of the server will be used.
+	// +unionMember=volume,optional
+	// +optional
 	AvailabilityZone string `json:"availabilityZone,omitempty"`
 }
 

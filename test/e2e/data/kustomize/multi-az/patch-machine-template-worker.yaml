@@ -9,6 +9,10 @@
   path: /spec/template/spec/additionalBlockDevices
   value:
   - diskSize: 1
+    type: volume
     name: extravol
     volumeType: ${OPENSTACK_VOLUME_TYPE_ALT}
     availabilityZone: ${OPENSTACK_FAILURE_DOMAIN}
+  - diskSize: 1
+    type: local
+    name: etcd

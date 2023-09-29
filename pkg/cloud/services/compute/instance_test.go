@@ -658,9 +658,15 @@ func TestService_ReconcileInstance(t *testing.T) {
 				}
 				s.AdditionalBlockDevices = []infrav1.AdditionalBlockDevice{
 					{
+						Type:       "volume",
 						Name:       "etcd",
 						Size:       50,
 						VolumeType: "test-volume-type",
+					},
+					{
+						Type: "local",
+						Name: "local-device",
+						Size: 10,
 					},
 				}
 				return s
@@ -710,7 +716,16 @@ func TestService_ReconcileInstance(t *testing.T) {
 						"boot_index":            float64(-1),
 						"delete_on_termination": true,
 						"destination_type":      "volume",
+						"volume_size":           float64(50),
 						"tag":                   "etcd",
+					},
+					{
+						"source_type":           "blank",
+						"destination_type":      "local",
+						"boot_index":            float64(-1),
+						"delete_on_termination": true,
+						"volume_size":           float64(10),
+						"tag":                   "local-device",
 					},
 				}
 				expectCreateServer(r.compute, createMap, false)
@@ -721,14 +736,20 @@ func TestService_ReconcileInstance(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Additional block device success",
+			name: "Additional block devices success",
 			getInstanceSpec: func() *InstanceSpec {
 				s := getDefaultInstanceSpec()
 				s.AdditionalBlockDevices = []infrav1.AdditionalBlockDevice{
 					{
+						Type:       "volume",
 						Name:       "etcd",
 						Size:       50,
 						VolumeType: "test-volume-type",
+					},
+					{
+						Type: "local",
+						Name: "data",
+						Size: 10,
 					},
 				}
 				return s
@@ -765,7 +786,16 @@ func TestService_ReconcileInstance(t *testing.T) {
 						"boot_index":            float64(-1),
 						"delete_on_termination": true,
 						"destination_type":      "volume",
+						"volume_size":           float64(50),
 						"tag":                   "etcd",
+					},
+					{
+						"source_type":           "blank",
+						"destination_type":      "local",
+						"boot_index":            float64(-1),
+						"delete_on_termination": true,
+						"volume_size":           float64(10),
+						"tag":                   "data",
 					},
 				}
 				expectCreateServer(r.compute, createMap, false)
@@ -781,6 +811,7 @@ func TestService_ReconcileInstance(t *testing.T) {
 				s := getDefaultInstanceSpec()
 				s.AdditionalBlockDevices = []infrav1.AdditionalBlockDevice{
 					{
+						Type:             "volume",
 						Name:             "etcd",
 						Size:             50,
 						VolumeType:       "test-volume-type",
@@ -821,6 +852,7 @@ func TestService_ReconcileInstance(t *testing.T) {
 						"boot_index":            float64(-1),
 						"delete_on_termination": true,
 						"destination_type":      "volume",
+						"volume_size":           float64(50),
 						"tag":                   "etcd",
 					},
 				}
@@ -830,6 +862,28 @@ func TestService_ReconcileInstance(t *testing.T) {
 				// Don't delete ports because the server is created: DeleteInstance will do it
 			},
 			wantErr: false,
+		},
+		{
+			name: "Additional block device error when using wrong type",
+			getInstanceSpec: func() *InstanceSpec {
+				s := getDefaultInstanceSpec()
+				s.AdditionalBlockDevices = []infrav1.AdditionalBlockDevice{
+					{
+						Type: "doesnt-exist",
+						Name: "oops",
+						Size: 1,
+					},
+				}
+				return s
+			},
+			expect: func(r *recorders) {
+				expectUseExistingDefaultPort(r.network)
+				expectDefaultImageAndFlavor(r.compute, r.image)
+
+				// Make sure we delete ports
+				expectCleanupDefaultPort(r.network)
+			},
+			wantErr: true,
 		},
 		{
 			name: "Delete trunks on port creation error",

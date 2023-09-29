@@ -463,6 +463,7 @@ func (s *Service) getBlockDevices(eventObject runtime.Object, instanceSpec *Inst
 
 	if hasRootVolume(instanceSpec) {
 		rootVolumeToBlockDevice := infrav1.AdditionalBlockDevice{
+			Type:             infrav1.VolumeBlockDevice,
 			Name:             "root",
 			AvailabilityZone: instanceSpec.RootVolume.AvailabilityZone,
 			Size:             instanceSpec.RootVolume.Size,
@@ -490,16 +491,31 @@ func (s *Service) getBlockDevices(eventObject runtime.Object, instanceSpec *Inst
 	}
 
 	for _, blockDeviceSpec := range instanceSpec.AdditionalBlockDevices {
-		blockDevice, err := s.getOrCreateVolumeBuilder(eventObject, instanceSpec, blockDeviceSpec, "", fmt.Sprintf("Additional block device for %s", instanceSpec.Name))
-		if err != nil {
-			return []bootfromvolume.BlockDevice{}, err
+		var bdUUID string
+		var sourceType bootfromvolume.SourceType
+		var destinationType bootfromvolume.DestinationType
+		if blockDeviceSpec.Type == infrav1.VolumeBlockDevice {
+			blockDevice, err := s.getOrCreateVolumeBuilder(eventObject, instanceSpec, blockDeviceSpec, "", fmt.Sprintf("Additional block device for %s", instanceSpec.Name))
+			if err != nil {
+				return []bootfromvolume.BlockDevice{}, err
+			}
+			bdUUID = blockDevice.ID
+			sourceType = bootfromvolume.SourceVolume
+			destinationType = bootfromvolume.DestinationVolume
+		} else if blockDeviceSpec.Type == infrav1.LocalBlockDevice {
+			sourceType = bootfromvolume.SourceBlank
+			destinationType = bootfromvolume.DestinationLocal
+		} else {
+			return []bootfromvolume.BlockDevice{}, fmt.Errorf("invalid block device type %s", blockDeviceSpec.Type)
 		}
+
 		blockDevices = append(blockDevices, bootfromvolume.BlockDevice{
-			SourceType:          bootfromvolume.SourceVolume,
-			DestinationType:     bootfromvolume.DestinationVolume,
-			UUID:                blockDevice.ID,
+			SourceType:          sourceType,
+			DestinationType:     destinationType,
+			UUID:                bdUUID,
 			BootIndex:           -1,
 			DeleteOnTermination: true,
+			VolumeSize:          blockDeviceSpec.Size,
 			Tag:                 blockDeviceSpec.Name,
 		})
 	}

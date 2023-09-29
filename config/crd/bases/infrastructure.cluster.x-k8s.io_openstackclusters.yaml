@@ -3774,6 +3774,8 @@ spec:
                         description: AdditionalBlockDevices is a list of specifications
                           for additional block devices to attach to the server instance
                         items:
+                          description: AdditionalBlockDevice is a block device to
+                            attach to the server.
                           properties:
                             availabilityZone:
                               description: AvailabilityZone is the volume availability
@@ -3781,12 +3783,20 @@ spec:
                                 zone of the server will be used.
                               type: string
                             diskSize:
-                              description: Size is the size in GB of the volume.
+                              description: Size is the size in GB of the block device.
                               type: integer
                             name:
-                              description: Name of the Cinder volume in the context
+                              description: Name of the block device in the context
                                 of a machine. It will be combined with the machine
-                                name to make the actual volume name.
+                                name to make the actual cinder volume name, and will
+                                be used for tagging the block device.
+                              type: string
+                            type:
+                              description: Type is the type of block device to create.
+                                This can be either "volume" or "local".
+                              enum:
+                              - volume
+                              - local
                               type: string
                             volumeType:
                               description: VolumeType is the volume type of the volume.
@@ -3795,6 +3805,7 @@ spec:
                           required:
                           - diskSize
                           - name
+                          - type
                           type: object
                         type: array
                         x-kubernetes-list-map-keys:
