@@ -52,12 +52,7 @@ GOLANGCI_LINT := $(TOOLS_BIN_DIR)/golangci-lint
 KUSTOMIZE := $(TOOLS_BIN_DIR)/kustomize
 MOCKGEN := $(TOOLS_BIN_DIR)/mockgen
 RELEASE_NOTES := $(TOOLS_BIN_DIR)/release-notes
-
-# Setup-envtest
-SETUP_ENVTEST_VER := v0.0.0-20221201045826-d9912251cd81
-SETUP_ENVTEST_BIN := setup-envtest
-SETUP_ENVTEST := $(abspath $(TOOLS_BIN_DIR)/$(SETUP_ENVTEST_BIN)-$(SETUP_ENVTEST_VER))
-SETUP_ENVTEST_PKG := sigs.k8s.io/controller-runtime/tools/setup-envtest
+SETUP_ENVTEST := $(TOOLS_BIN_DIR)/setup-envtest
 
 # Kubebuilder
 export KUBEBUILDER_ENVTEST_KUBERNETES_VERSION ?= 1.25.0
@@ -135,15 +130,25 @@ endif
 $(ARTIFACTS):
 	mkdir -p $@
 
-ifeq ($(shell go env GOOS),darwin) # Use the darwin/amd64 binary until an arm64 version is available
-  KUBEBUILDER_ASSETS ?= $(shell $(SETUP_ENVTEST) use --use-env -p path --arch amd64 $(KUBEBUILDER_ENVTEST_KUBERNETES_VERSION))
-else
-  KUBEBUILDER_ASSETS ?= $(shell $(SETUP_ENVTEST) use --use-env -p path $(KUBEBUILDER_ENVTEST_KUBERNETES_VERSION))
+setup_envtest_extra_args=
+# Use the darwin/amd64 binary until an arm64 version is available
+ifeq ($(shell go env GOOS),darwin)
+	setup_envtest_extra_args += --arch amd64
+endif
+
+# By default setup-envtest will write to $XDG_DATA_HOME, or $HOME/.local/share
+# if that is not defined. Set KUBEBUILDER_ASSETS_DIR to override.
+ifdef KUBEBUILDER_ASSETS_DIR
+	setup_envtest_extra_args += --bin-dir $(KUBEBUILDER_ASSETS_DIR)
 endif
 
 .PHONY: test
 test: $(SETUP_ENVTEST) ## Run tests
-	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test -v ./... $(TEST_ARGS)
+	set -xeuf -o pipefail; \
+	if [ -z "$(KUBEBUILDER_ASSETS)" ]; then \
+		KUBEBUILDER_ASSETS=`$(SETUP_ENVTEST) use --use-env -p path $(setup_envtest_extra_args) $(KUBEBUILDER_ENVTEST_KUBERNETES_VERSION)`; \
+	fi; \
+	KUBEBUILDER_ASSETS="$$KUBEBUILDER_ASSETS" go test -v ./... $(TEST_ARGS)
 
 E2E_TEMPLATES_DIR=test/e2e/data/infrastructure-openstack
 E2E_KUSTOMIZE_DIR=test/e2e/data/kustomize
@@ -224,12 +229,6 @@ managers:
 .PHONY: manager-openstack-infrastructure
 manager-openstack-infrastructure: ## Build manager binary.
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "${LDFLAGS} -extldflags '-static'" -o $(BIN_DIR)/manager .
-
-$(SETUP_ENVTEST): # Build setup-envtest from tools folder.
-	GOBIN=$(abspath $(TOOLS_BIN_DIR)) $(GO_INSTALL) $(SETUP_ENVTEST_PKG) $(SETUP_ENVTEST_BIN) $(SETUP_ENVTEST_VER)
-
-.PHONY: $(SETUP_ENVTEST_BIN)
-	$(SETUP_ENVTEST_BIN): $(SETUP_ENVTEST) ## Build a local copy of setup-envtest.
 
 ## --------------------------------------
 ##@ Linting
@@ -515,6 +514,17 @@ verify-gen: generate
 	@if !(git diff --quiet HEAD); then \
 		git diff; \
 		echo "generated files are out of date, run make generate"; exit 1; \
+	fi
+
+.PHONY: vendor verify-vendoring
+vendor:
+	go mod vendor
+	cd $(TOOLS_DIR); go mod vendor
+
+verify-vendoring: vendor
+	@if !(git diff --quiet HEAD); then \
+		git diff; \
+		echo "vendored files are out of date, run go mod vendor"; exit 1; \
 	fi
 
 .PHONY: compile-e2e
