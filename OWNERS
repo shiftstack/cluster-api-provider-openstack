@@ -1,6 +1,21 @@
+# See the OWNERS docs: https://git.k8s.io/community/contributors/guide/owners.md
+
 approvers:
-  - shiftstack-team
+  - sig-cluster-lifecycle-leads
+  - cluster-api-openstack-maintainers
+
 reviewers:
-  - shiftstack-team
-component: "Cloud Compute"
-subcomponent: "OpenStack Provider"
+  - cluster-api-openstack-maintainers
+  - cluster-api-openstack-reviewers
+
+emeritus_approvers:
+  - ncdc
+  - chaosaffe
+  - chrigl
+  - dims
+  - gyliu513
+  - Lion-Wei
+  - m1093782566
+  - sbueringer
+  - hidekazuna
+  - chrischdi
