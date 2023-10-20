@@ -658,15 +658,21 @@ func TestService_ReconcileInstance(t *testing.T) {
 				}
 				s.AdditionalBlockDevices = []infrav1.AdditionalBlockDevice{
 					{
-						Type:       "volume",
-						Name:       "etcd",
-						Size:       50,
-						VolumeType: "test-volume-type",
+						Name: "etcd",
+						Size: 50,
+						Storage: infrav1.BlockDeviceStorage{
+							Type: "Volume",
+							Volume: &infrav1.BlockDeviceVolume{
+								Type: "test-volume-type",
+							},
+						},
 					},
 					{
-						Type: "local",
 						Name: "local-device",
 						Size: 10,
+						Storage: infrav1.BlockDeviceStorage{
+							Type: "Local",
+						},
 					},
 				}
 				return s
@@ -741,15 +747,21 @@ func TestService_ReconcileInstance(t *testing.T) {
 				s := getDefaultInstanceSpec()
 				s.AdditionalBlockDevices = []infrav1.AdditionalBlockDevice{
 					{
-						Type:       "volume",
-						Name:       "etcd",
-						Size:       50,
-						VolumeType: "test-volume-type",
+						Name: "etcd",
+						Size: 50,
+						Storage: infrav1.BlockDeviceStorage{
+							Type: "Volume",
+							Volume: &infrav1.BlockDeviceVolume{
+								Type: "test-volume-type",
+							},
+						},
 					},
 					{
-						Type: "local",
 						Name: "data",
 						Size: 10,
+						Storage: infrav1.BlockDeviceStorage{
+							Type: "Local",
+						},
 					},
 				}
 				return s
@@ -811,11 +823,15 @@ func TestService_ReconcileInstance(t *testing.T) {
 				s := getDefaultInstanceSpec()
 				s.AdditionalBlockDevices = []infrav1.AdditionalBlockDevice{
 					{
-						Type:             "volume",
-						Name:             "etcd",
-						Size:             50,
-						VolumeType:       "test-volume-type",
-						AvailabilityZone: "test-alternate-az",
+						Name: "etcd",
+						Size: 50,
+						Storage: infrav1.BlockDeviceStorage{
+							Type: "Volume",
+							Volume: &infrav1.BlockDeviceVolume{
+								AvailabilityZone: "test-alternate-az",
+								Type:             "test-volume-type",
+							},
+						},
 					},
 				}
 				return s
@@ -869,9 +885,11 @@ func TestService_ReconcileInstance(t *testing.T) {
 				s := getDefaultInstanceSpec()
 				s.AdditionalBlockDevices = []infrav1.AdditionalBlockDevice{
 					{
-						Type: "doesnt-exist",
 						Name: "oops",
 						Size: 1,
+						Storage: infrav1.BlockDeviceStorage{
+							Type: "doesnt-exist",
+						},
 					},
 				}
 				return s

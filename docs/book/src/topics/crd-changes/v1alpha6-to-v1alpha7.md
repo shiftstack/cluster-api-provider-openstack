@@ -224,18 +224,22 @@ to the server instance:
 ```yaml
 additionalBlockDevices:
 - name: database
-  type: volume
-  diskSize: 50
-  volumeType: my-volume-type
-  availabilityZone: az0
+  size: 50
+  storage:
+    type: volume
+    volume:
+      type: my-volume-type
+      availabilityZone: az0
 ```
 
 Here is an example on how to attach a ephemeral disk to the instance:
 
 ```yaml
+additionalBlockDevices
 - name: disk1
-  type: local
-  diskSize: 1
+  size: 1
+  storage:
+    type: local
 ```
 
 Adding more than one ephemeral disk to an instance is possible but you should use it at your own risks, it has been

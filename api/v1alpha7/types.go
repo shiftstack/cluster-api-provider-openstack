@@ -17,15 +17,14 @@ limitations under the License.
 package v1alpha7
 
 // BlockDeviceType defines the type of block device to create.
-// +kubebuilder:validation:Enum=volume;local
 type BlockDeviceType string
 
 const (
-	// LocalBlockDevice is an ephemeral block deviced attached to the server.
-	LocalBlockDevice BlockDeviceType = "local"
+	// LocalBlockDevice is an ephemeral block device attached to the server.
+	LocalBlockDevice BlockDeviceType = "Local"
 
 	// VolumeBlockDevice is a volume block device attached to the server.
-	VolumeBlockDevice BlockDeviceType = "volume"
+	VolumeBlockDevice BlockDeviceType = "Volume"
 )
 
 // OpenStackMachineTemplateResource describes the data needed to create a OpenStackMachine from a template.
@@ -175,33 +174,50 @@ type RootVolume struct {
 	AvailabilityZone string `json:"availabilityZone,omitempty"`
 }
 
-// AdditionalBlockDevice is a block device to attach to the server.
-type AdditionalBlockDevice struct {
-	// Type is the type of block device to create.
-	// This can be either "volume" or "local".
+// blockDeviceStorage is the storage type of a block device to create and
+// contains additional storage options.
+type BlockDeviceStorage struct {
+	// type is the type of block device to create.
+	// This can be either "Volume" or "Local".
+	// +kubebuilder:validation:Enum="Volume";"Local"
 	// +kubebuilder:validation:Required
-	// +unionDiscriminator
 	Type BlockDeviceType `json:"type"`
 
-	// Name of the block device in the context of a machine.
-	// It will be combined with the machine name to make the actual cinder
-	// volume name, and will be used for tagging the block device.
-	Name string `json:"name"`
-
-	// Size is the size in GB of the block device.
-	Size int `json:"diskSize"`
-
-	// VolumeType is the volume type of the volume.
-	// If omitted, the default type will be used.
-	// +unionMember=volume,optional
+	// volume contains additional storage options for a volume block device.
 	// +optional
-	VolumeType string `json:"volumeType,omitempty"`
+	Volume *BlockDeviceVolume `json:"volume,omitempty"`
+}
 
-	// AvailabilityZone is the volume availability zone to create the volume in.
+// blockDeviceVolume contains additional storage options for a volume block device.
+type BlockDeviceVolume struct {
+	// type is the volume type of the volume.
+	// If omitted, the default volume type will be used.
+	// +optional
+	Type string `json:"type,omitempty"`
+
+	// availabilityZone is the volume availability zone to create the volume in.
 	// If omitted, the availability zone of the server will be used.
-	// +unionMember=volume,optional
 	// +optional
 	AvailabilityZone string `json:"availabilityZone,omitempty"`
+}
+
+// additionalBlockDevice is a block device to attach to the server.
+type AdditionalBlockDevice struct {
+	// name of the block device in the context of a machine.
+	// If the block device is a volume, the Cinder volume will be named
+	// as a combination of the machine name and this name.
+	// Also, this name will be used for tagging the block device.
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+
+	// size is the size in GiB of the block device.
+	// +kubebuilder:validation:Required
+	Size int `json:"size"`
+
+	// storage specifies the storage type of the block device and
+	// additional storage options.
+	// +kubebuilder:validation:Required
+	Storage BlockDeviceStorage `json:"storage"`
 }
 
 // NetworkStatus contains basic information about an existing neutron network.

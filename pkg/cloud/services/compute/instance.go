@@ -439,8 +439,8 @@ func (s *Service) waitForVolume(volumeID string, timeout time.Duration, retryInt
 // It returns an error if the volume creation failed or if the expected volume is different from the one that already exists.
 func (s *Service) getOrCreateVolumeBuilder(eventObject runtime.Object, instanceSpec *InstanceSpec, blockDevice infrav1.AdditionalBlockDevice, imageID string, description string) (*volumes.Volume, error) {
 	availabilityZone := instanceSpec.FailureDomain
-	if blockDevice.AvailabilityZone != "" {
-		availabilityZone = blockDevice.AvailabilityZone
+	if blockDevice.Storage.Volume.AvailabilityZone != "" {
+		availabilityZone = blockDevice.Storage.Volume.AvailabilityZone
 	}
 
 	createOpts := volumes.CreateOpts{
@@ -450,7 +450,7 @@ func (s *Service) getOrCreateVolumeBuilder(eventObject runtime.Object, instanceS
 		ImageID:          imageID,
 		Multiattach:      false,
 		AvailabilityZone: availabilityZone,
-		VolumeType:       blockDevice.VolumeType,
+		VolumeType:       blockDevice.Storage.Volume.Type,
 	}
 
 	return s.getOrCreateVolume(eventObject, createOpts)
@@ -463,11 +463,15 @@ func (s *Service) getBlockDevices(eventObject runtime.Object, instanceSpec *Inst
 
 	if hasRootVolume(instanceSpec) {
 		rootVolumeToBlockDevice := infrav1.AdditionalBlockDevice{
-			Type:             infrav1.VolumeBlockDevice,
-			Name:             "root",
-			AvailabilityZone: instanceSpec.RootVolume.AvailabilityZone,
-			Size:             instanceSpec.RootVolume.Size,
-			VolumeType:       instanceSpec.RootVolume.VolumeType,
+			Name: "root",
+			Size: instanceSpec.RootVolume.Size,
+			Storage: infrav1.BlockDeviceStorage{
+				Type: infrav1.VolumeBlockDevice,
+				Volume: &infrav1.BlockDeviceVolume{
+					AvailabilityZone: instanceSpec.RootVolume.AvailabilityZone,
+					Type:             instanceSpec.RootVolume.VolumeType,
+				},
+			},
 		}
 		rootVolume, err := s.getOrCreateVolumeBuilder(eventObject, instanceSpec, rootVolumeToBlockDevice, imageID, fmt.Sprintf("Root volume for %s", instanceSpec.Name))
 		if err != nil {
@@ -494,7 +498,7 @@ func (s *Service) getBlockDevices(eventObject runtime.Object, instanceSpec *Inst
 		var bdUUID string
 		var sourceType bootfromvolume.SourceType
 		var destinationType bootfromvolume.DestinationType
-		if blockDeviceSpec.Type == infrav1.VolumeBlockDevice {
+		if blockDeviceSpec.Storage.Type == infrav1.VolumeBlockDevice {
 			blockDevice, err := s.getOrCreateVolumeBuilder(eventObject, instanceSpec, blockDeviceSpec, "", fmt.Sprintf("Additional block device for %s", instanceSpec.Name))
 			if err != nil {
 				return []bootfromvolume.BlockDevice{}, err
@@ -502,11 +506,11 @@ func (s *Service) getBlockDevices(eventObject runtime.Object, instanceSpec *Inst
 			bdUUID = blockDevice.ID
 			sourceType = bootfromvolume.SourceVolume
 			destinationType = bootfromvolume.DestinationVolume
-		} else if blockDeviceSpec.Type == infrav1.LocalBlockDevice {
+		} else if blockDeviceSpec.Storage.Type == infrav1.LocalBlockDevice {
 			sourceType = bootfromvolume.SourceBlank
 			destinationType = bootfromvolume.DestinationLocal
 		} else {
-			return []bootfromvolume.BlockDevice{}, fmt.Errorf("invalid block device type %s", blockDeviceSpec.Type)
+			return []bootfromvolume.BlockDevice{}, fmt.Errorf("invalid block device type %s", blockDeviceSpec.Storage.Type)
 		}
 
 		blockDevices = append(blockDevices, bootfromvolume.BlockDevice{

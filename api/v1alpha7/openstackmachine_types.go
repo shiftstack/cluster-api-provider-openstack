@@ -84,7 +84,8 @@ type OpenStackMachineSpec struct {
 	// The volume metadata to boot from
 	RootVolume *RootVolume `json:"rootVolume,omitempty"`
 
-	// AdditionalBlockDevices is a list of specifications for additional block devices to attach to the server instance
+	// additionalBlockDevices is a list of specifications for additional block devices to attach to the server instance
+	// +optional
 	// +listType=map
 	// +listMapKey=name
 	AdditionalBlockDevices []AdditionalBlockDevice `json:"additionalBlockDevices,omitempty"`
