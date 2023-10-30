@@ -5,3 +5,17 @@
     diskSize: 15
     volumeType: ${OPENSTACK_VOLUME_TYPE_ALT}
     availabilityZone: ${OPENSTACK_FAILURE_DOMAIN}
+- op: add
+  path: /spec/template/spec/additionalBlockDevices
+  value:
+  - name: extravol
+    sizeGiB: 1
+    storage:
+      type: Volume
+      volume:
+        type: ${OPENSTACK_VOLUME_TYPE_ALT}
+        availabilityZone: ${OPENSTACK_FAILURE_DOMAIN}
+  - name: etcd
+    sizeGiB: 1
+    storage:
+      type: Local
