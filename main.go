@@ -34,6 +34,7 @@ import (
 	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1alpha1"
 	"sigs.k8s.io/cluster-api/util/flags"
 	ctrl "sigs.k8s.io/controller-runtime"
 	cache "sigs.k8s.io/controller-runtime/pkg/cache"
@@ -82,6 +83,7 @@ var (
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
+	_ = ipamv1.AddToScheme(scheme)
 	_ = infrav1.AddToScheme(scheme)
 	_ = infrav1alpha5.AddToScheme(scheme)
 	_ = infrav1alpha6.AddToScheme(scheme)
@@ -244,7 +246,6 @@ func main() {
 	setupChecks(mgr)
 	setupReconcilers(ctx, mgr, caCerts, scopeFactory)
 	setupWebhooks(mgr)
-
 	// +kubebuilder:scaffold:builder
 	setupLog.Info("starting manager", "version", version.Get().String())
 	if err := mgr.Start(ctx); err != nil {
@@ -286,6 +287,26 @@ func setupReconcilers(ctx context.Context, mgr ctrl.Manager, caCerts []byte, sco
 		setupLog.Error(err, "unable to create controller", "controller", "OpenStackMachine")
 		os.Exit(1)
 	}
+	if err := (&controllers.OpenStackFloatingIPPoolReconciler{
+		Client:         mgr.GetClient(),
+		Recorder:       mgr.GetEventRecorderFor("floatingippool-controller"),
+		ScopeFactory:   scopeFactory,
+		Scheme:         mgr.GetScheme(),
+		CaCertificates: caCerts,
+	}).SetupWithManager(ctx, mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "FloatingIPPool")
+		os.Exit(1)
+	}
+	if err := (&controllers.IPAddressReconciler{
+		Client:         mgr.GetClient(),
+		Recorder:       mgr.GetEventRecorderFor("ipaddress-controller"),
+		ScopeFactory:   scopeFactory,
+		Scheme:         mgr.GetScheme(),
+		CaCertificates: caCerts,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "IPAddress")
+		os.Exit(1)
+	}
 }
 
 func setupWebhooks(mgr ctrl.Manager) {
@@ -315,6 +336,11 @@ func setupWebhooks(mgr ctrl.Manager) {
 	}
 	if err := (&infrav1.OpenStackClusterList{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackClusterList")
+		os.Exit(1)
+	}
+
+	if err := (&infrav1.OpenStackFloatingIPPool{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "OpenStackFloatingIPPool")
 		os.Exit(1)
 	}
 }
