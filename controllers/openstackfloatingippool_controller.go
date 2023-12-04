@@ -121,17 +121,16 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 		}
 
 		if claim.Status.AddressRef.Name == "" {
-			ip, err := r.getIP(ctx, scope, pool)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-
-			// try to get the ipaddress
 			ipAddress := &ipamv1.IPAddress{}
 			if err := r.Client.Get(ctx, client.ObjectKey{Name: claim.Name, Namespace: claim.Namespace}, ipAddress); err == nil {
 				// IPAddress already exists, another reconciler is working on it
-				log.Info("IPAddress already exists, another reconciler is working on it", "ip", ip)
+				log.Info("IPAddress already exists, another reconciler is working on it")
 				continue
+			}
+
+			ip, err := r.getIP(ctx, scope, pool)
+			if err != nil {
+				return ctrl.Result{}, err
 			}
 
 			ipAddress = &ipamv1.IPAddress{
