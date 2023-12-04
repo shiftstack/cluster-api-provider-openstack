@@ -126,7 +126,15 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 				return ctrl.Result{}, err
 			}
 
-			ipAddress := &ipamv1.IPAddress{
+			// try to get the ipaddress
+			ipAddress := &ipamv1.IPAddress{}
+			if err := r.Client.Get(ctx, client.ObjectKey{Name: claim.Name, Namespace: claim.Namespace}, ipAddress); err == nil {
+				// IPAddress already exists, another reconciler is working on it
+				log.Info("IPAddress already exists, another reconciler is working on it", "ip", ip)
+				continue
+			}
+
+			ipAddress = &ipamv1.IPAddress{
 				ObjectMeta: ctrl.ObjectMeta{
 					Name:      claim.Name,
 					Namespace: claim.Namespace,
@@ -247,10 +255,13 @@ func (r *OpenStackFloatingIPPoolReconciler) setIPStatuses(ctx context.Context, s
 	for _, ip := range ipAddresses.Items {
 		pool.Status.ClaimedIPs = append(pool.Status.ClaimedIPs, ip.Spec.Address)
 	}
+	for _, ip := range pool.Spec.PreAllocatedFloatingIPs {
+		pool.Status.IPs = append(pool.Status.IPs, ip)
+	}
 
 	pool.Status.IPs = union(pool.Status.IPs, pool.Status.ClaimedIPs)
 	pool.Status.AvailableIPs = diff(diff(pool.Status.IPs, pool.Status.ClaimedIPs), pool.Status.FailedIPs)
-	return r.Client.Status().Update(ctx, pool)
+	return nil
 }
 
 func (r *OpenStackFloatingIPPoolReconciler) getIP(ctx context.Context, scope scope.Scope, pool *infrav1.OpenStackFloatingIPPool) (string, error) {
@@ -266,9 +277,6 @@ func (r *OpenStackFloatingIPPoolReconciler) getIP(ctx context.Context, scope sco
 		ip = pool.Status.AvailableIPs[0]
 		pool.Status.AvailableIPs = pool.Status.AvailableIPs[1:]
 		pool.Status.ClaimedIPs = append(pool.Status.ClaimedIPs, ip)
-		if err := r.Client.Status().Update(ctx, pool); err != nil {
-			return "", err
-		}
 	}
 
 	if ip != "" {
@@ -276,12 +284,15 @@ func (r *OpenStackFloatingIPPoolReconciler) getIP(ctx context.Context, scope sco
 		if err != nil {
 			return "", fmt.Errorf("get floating IP: %w", err)
 		}
-		// If the IP does not exist, we continue and try to allocate it, if we fail to allocate it it will be marked as failed
+		// If the IP exist return it, else we continue and try to allocate it if we fail to allocate it we will mark it as failed
 		if fp != nil {
 			return fp.FloatingIP, nil
 		}
 	}
 
+	// ip could be empty meaning we want to get a new one or the IP
+	// if ip is not empty it got and ip from availableIPs that does not exist in openstack
+	// we try to allocate it, if we fail we mark it as failed and skip it next time
 	fp, err := networkingService.CreateFloatingIPForPool(pool, ip)
 	if err != nil {
 		scope.Logger().Error(err, "Failed to create floating IP", "pool", pool.Name, "ip", ip)
@@ -296,10 +307,6 @@ func (r *OpenStackFloatingIPPoolReconciler) getIP(ctx context.Context, scope sco
 	ip = fp.FloatingIP
 	pool.Status.ClaimedIPs = append(pool.Status.ClaimedIPs, ip)
 	pool.Status.IPs = append(pool.Status.IPs, ip)
-	if err := r.Client.Status().Update(ctx, pool); err != nil {
-		scope.Logger().Error(err, "Failed to update OpenStackFloatingIPPool status", "pool", pool.Name, "ip", ip)
-		return "", err
-	}
 	return ip, nil
 }
 
@@ -333,7 +340,7 @@ func (r *OpenStackFloatingIPPoolReconciler) reconcileFloatingIPNetwork(ctx conte
 	pool.Status.FloatingIPNetwork.ID = networkList[0].ID
 	pool.Status.FloatingIPNetwork.Name = networkList[0].Name
 	pool.Status.FloatingIPNetwork.Tags = networkList[0].Tags
-	return r.Client.Status().Update(ctx, pool)
+	return nil
 }
 
 func (r *OpenStackFloatingIPPoolReconciler) getInfraCluster(ctx context.Context, cluster *clusterv1.Cluster, claim *ipamv1.IPAddressClaim) (*infrav1.OpenStackCluster, error) {

@@ -17,7 +17,6 @@ limitations under the License.
 package networking
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -69,33 +68,6 @@ func (s *Service) GetOrCreateFloatingIP(eventObject runtime.Object, openStackClu
 	}
 
 	record.Eventf(eventObject, "SuccessfulCreateFloatingIP", "Created floating IP %s with id %s", fp.FloatingIP, fp.ID)
-	return fp, nil
-}
-
-func (s *Service) GetOrCreateFloatingIPForPool(pool *infrav1.OpenStackFloatingIPPool, ip string) (*floatingips.FloatingIP, error) {
-	var fp *floatingips.FloatingIP
-	var err error
-	var fpCreateOpts floatingips.CreateOpts
-
-	if ip != "" {
-		fpList, err := s.client.ListFloatingIP(floatingips.ListOpts{FloatingIP: ip})
-		if err != nil {
-			return nil, err
-		}
-		if len(fpList) == 0 {
-			return nil, errors.New("floating IP not found")
-		}
-		return &fpList[0], nil
-	}
-	fpCreateOpts.FloatingNetworkID = pool.Status.FloatingIPNetwork.ID
-	fpCreateOpts.Description = fmt.Sprintf("Created by cluster-api-provider-openstack floating IP pool %s", pool.Name)
-
-	fp, err = s.client.CreateFloatingIP(fpCreateOpts)
-	if err != nil {
-		record.Warnf(pool, "FailedCreateFloatingIP", "Failed to create floating IP %s: %v", ip, err)
-		return nil, err
-	}
-	record.Eventf(pool, "SuccessfulCreateFloatingIP", "Created floating IP %s with id %s", fp.FloatingIP, fp.ID)
 	return fp, nil
 }
 
