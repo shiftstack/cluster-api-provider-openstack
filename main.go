@@ -81,6 +81,7 @@ func init() {
 	_ = infrav1.AddToScheme(scheme)
 	_ = infrav1alpha5.AddToScheme(scheme)
 	_ = infrav1alpha6.AddToScheme(scheme)
+	utilruntime.Must(infrastructurev1alpha7.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 
 	metrics.RegisterAPIPrometheusMetrics()
@@ -218,6 +219,14 @@ func main() {
 	setupReconcilers(ctx, mgr, caCerts, scopeFactory)
 	setupWebhooks(mgr)
 
+	if err = (&controllers.OpenStackOctaviaEndpointProviderReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("OpenStackOctaviaEndpointProvider"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "OpenStackOctaviaEndpointProvider")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 	setupLog.Info("starting manager", "version", version.Get().String())
 	if err := mgr.Start(ctx); err != nil {
