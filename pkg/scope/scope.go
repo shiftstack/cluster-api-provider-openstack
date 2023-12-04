@@ -21,12 +21,19 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1 "sigs.k8s.io/cluster-api-provider-openstack/api/v1alpha7"
 	"sigs.k8s.io/cluster-api-provider-openstack/pkg/clients"
 )
+
+type OpenStackCredentialsProvider interface {
+	metav1.Object
+	GetIdentityRef() *infrav1.OpenStackIdentityReference
+	GetCloudName() string
+}
 
 // NewFactory creates the default scope factory. It generates service clients which make OpenStack API calls against a running cloud.
 func NewFactory(maxCacheSize int) Factory {
@@ -41,8 +48,7 @@ func NewFactory(maxCacheSize int) Factory {
 
 // Factory instantiates a new Scope using credentials from either a cluster or a machine.
 type Factory interface {
-	NewClientScopeFromMachine(ctx context.Context, ctrlClient client.Client, openStackMachine *infrav1.OpenStackMachine, defaultCACert []byte, logger logr.Logger) (Scope, error)
-	NewClientScopeFromCluster(ctx context.Context, ctrlClient client.Client, openStackCluster *infrav1.OpenStackCluster, defaultCACert []byte, logger logr.Logger) (Scope, error)
+	NewClientScope(ctx context.Context, ctrlClient client.Client, obj OpenStackCredentialsProvider, defaultCACert []byte, logger logr.Logger) (Scope, error)
 }
 
 // Scope contains arguments common to most operations.

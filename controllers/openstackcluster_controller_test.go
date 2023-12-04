@@ -195,7 +195,7 @@ var _ = Describe("OpenStackCluster controller", func() {
 		Expect(err).To(BeNil())
 		err = k8sClient.Create(ctx, capiCluster)
 		Expect(err).To(BeNil())
-		scope, err := mockScopeFactory.NewClientScopeFromCluster(ctx, k8sClient, testCluster, nil, logr.Discard())
+		scope, err := mockScopeFactory.NewClientScope(ctx, k8sClient, testCluster, nil, logr.Discard())
 		Expect(err).To(BeNil())
 
 		computeClientRecorder := mockScopeFactory.ComputeClient.EXPECT()
@@ -227,7 +227,7 @@ var _ = Describe("OpenStackCluster controller", func() {
 		Expect(err).To(BeNil())
 		err = k8sClient.Create(ctx, capiCluster)
 		Expect(err).To(BeNil())
-		scope, err := mockScopeFactory.NewClientScopeFromCluster(ctx, k8sClient, testCluster, nil, logr.Discard())
+		scope, err := mockScopeFactory.NewClientScope(ctx, k8sClient, testCluster, nil, logr.Discard())
 		Expect(err).To(BeNil())
 
 		networkClientRecorder := mockScopeFactory.NetworkClient.EXPECT()

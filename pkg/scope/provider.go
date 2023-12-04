@@ -37,7 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
-	infrav1 "sigs.k8s.io/cluster-api-provider-openstack/api/v1alpha7"
 	"sigs.k8s.io/cluster-api-provider-openstack/pkg/clients"
 	"sigs.k8s.io/cluster-api-provider-openstack/pkg/utils/hash"
 	"sigs.k8s.io/cluster-api-provider-openstack/version"
@@ -52,36 +51,14 @@ type providerScopeFactory struct {
 	clientCache *cache.LRUExpireCache
 }
 
-func (f *providerScopeFactory) NewClientScopeFromMachine(ctx context.Context, ctrlClient client.Client, openStackMachine *infrav1.OpenStackMachine, defaultCACert []byte, logger logr.Logger) (Scope, error) {
+func (f *providerScopeFactory) NewClientScope(ctx context.Context, ctrlClient client.Client, obj OpenStackCredentialsProvider, defaultCACert []byte, logger logr.Logger) (Scope, error) {
 	var cloud clientconfig.Cloud
 	var caCert []byte
 
-	if openStackMachine.Spec.IdentityRef != nil {
+	identityRef := obj.GetIdentityRef()
+	if identityRef != nil {
 		var err error
-		cloud, caCert, err = getCloudFromSecret(ctx, ctrlClient, openStackMachine.Namespace, openStackMachine.Spec.IdentityRef.Name, openStackMachine.Spec.CloudName)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if caCert == nil {
-		caCert = defaultCACert
-	}
-
-	if f.clientCache == nil {
-		return NewProviderScope(cloud, caCert, logger)
-	}
-
-	return NewCachedProviderScope(f.clientCache, cloud, caCert, logger)
-}
-
-func (f *providerScopeFactory) NewClientScopeFromCluster(ctx context.Context, ctrlClient client.Client, openStackCluster *infrav1.OpenStackCluster, defaultCACert []byte, logger logr.Logger) (Scope, error) {
-	var cloud clientconfig.Cloud
-	var caCert []byte
-
-	if openStackCluster.Spec.IdentityRef != nil {
-		var err error
-		cloud, caCert, err = getCloudFromSecret(ctx, ctrlClient, openStackCluster.Namespace, openStackCluster.Spec.IdentityRef.Name, openStackCluster.Spec.CloudName)
+		cloud, caCert, err = getCloudFromSecret(ctx, ctrlClient, obj.GetNamespace(), identityRef.Name, obj.GetCloudName())
 		if err != nil {
 			return nil, err
 		}

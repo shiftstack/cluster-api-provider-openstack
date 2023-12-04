@@ -160,6 +160,15 @@ type OpenStackMachineList struct {
 	Items           []OpenStackMachine `json:"items"`
 }
 
+// Implement OpenStackCredentialsProvider
+func (m *OpenStackMachine) GetIdentityRef() *OpenStackIdentityReference {
+	return m.Spec.IdentityRef
+}
+
+func (m *OpenStackMachine) GetCloudName() string {
+	return m.Spec.CloudName
+}
+
 // GetConditions returns the observations of the operational state of the OpenStackMachine resource.
 func (r *OpenStackMachine) GetConditions() clusterv1.Conditions {
 	return r.Status.Conditions

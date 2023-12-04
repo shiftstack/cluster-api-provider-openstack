@@ -258,6 +258,15 @@ type OpenStackClusterList struct {
 	Items           []OpenStackCluster `json:"items"`
 }
 
+// Implement OpenStackCredentialsProvider
+func (c *OpenStackCluster) GetIdentityRef() *OpenStackIdentityReference {
+	return c.Spec.IdentityRef
+}
+
+func (c *OpenStackCluster) GetCloudName() string {
+	return c.Spec.CloudName
+}
+
 func init() {
 	SchemeBuilder.Register(&OpenStackCluster{}, &OpenStackClusterList{})
 }

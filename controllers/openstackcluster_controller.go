@@ -113,7 +113,7 @@ func (r *OpenStackClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 	}()
 
-	scope, err := r.ScopeFactory.NewClientScopeFromCluster(ctx, r.Client, openStackCluster, r.CaCertificates, log)
+	scope, err := r.ScopeFactory.NewClientScope(ctx, r.Client, openStackCluster, r.CaCertificates, log)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
