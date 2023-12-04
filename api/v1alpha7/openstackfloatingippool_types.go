@@ -67,7 +67,6 @@ type OpenStackFloatingIPPoolSpec struct {
 
 // OpenStackFloatingIPPoolStatus defines the observed state of OpenStackFloatingIPPool.
 type OpenStackFloatingIPPoolStatus struct {
-
 	// +kubebuilder:default={}
 	// +optional
 	ClaimedIPs []string `json:"claimedIPs"`
