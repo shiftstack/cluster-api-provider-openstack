@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/external"
@@ -71,6 +72,11 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	scope, err := r.ScopeFactory.NewClientScopeFromFloatingIPPool(ctx, r.Client, pool, r.CaCertificates, log)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	if pool.ObjectMeta.DeletionTimestamp.IsZero() {
 		// Add finalizer if it does not exist
 		if controllerutil.AddFinalizer(pool, infrav1.OpenStackFloatingIPPoolFinalizer) {
@@ -78,12 +84,7 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 		}
 	} else {
 		// Handle deletion
-		return r.reconcileDelete(ctx, pool)
-	}
-
-	scope, err := r.ScopeFactory.NewClientScopeFromFloatingIPPool(ctx, r.Client, pool, r.CaCertificates, log)
-	if err != nil {
-		return reconcile.Result{}, err
+		return r.reconcileDelete(ctx, scope, pool)
 	}
 
 	patchHelper, err := patch.NewHelper(pool, r.Client)
@@ -151,7 +152,9 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 				},
 			}
 
-			if !contains(pool.Spec.PreAllocatedFloatingIPs, ip) && pool.Spec.ReclaimPolicy == infrav1.ReclaimDelete {
+			// If the ReclaimPolicy is Delete, we add the finalizer to the IPAddress if they are not pre-allocated
+			// this is to ensure that the IPAddress is deleted from openstack when the claim is deleted
+			if pool.Spec.ReclaimPolicy == infrav1.ReclaimDelete && !contains(pool.Spec.PreAllocatedFloatingIPs, ip) {
 				controllerutil.AddFinalizer(ipAddress, infrav1.DeleteFloatingIPFinalizer)
 			}
 
@@ -173,20 +176,34 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 	return ctrl.Result{}, nil
 }
 
-func (r *OpenStackFloatingIPPoolReconciler) reconcileDelete(ctx context.Context, pool *infrav1.OpenStackFloatingIPPool) (ctrl.Result, error) {
+func (r *OpenStackFloatingIPPoolReconciler) reconcileDelete(ctx context.Context, scope scope.Scope, pool *infrav1.OpenStackFloatingIPPool) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 	ipAddresses := &ipamv1.IPAddressList{}
 	if err := r.Client.List(ctx, ipAddresses, client.InNamespace(pool.Namespace), client.MatchingFields{infrav1.OpenStackFloatingIPPoolNameIndex: pool.Name}); err != nil {
 		return ctrl.Result{}, err
 	}
-	// If there are still IPAddress objects, they might need the pool to be available for deletion
+	// If there are still IPAddress objects that are not deleted, there are still claims on this pool and we should not delete it
+	// beause the pool is needed to clean up the addresses from openstack
 	if len(ipAddresses.Items) > 0 {
 		log.Info("Waiting for IPAddress to be deleted before deleting OpenStackFloatingIPPool")
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, errors.New("waiting for IPAddress to be deleted, until we can delete the OpenStackFloatingIPPool")
 	}
+
+	networkingService, err := networking.NewService(scope)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Clean up ips created by the pool
+	for _, ip := range diff(pool.Status.IPs, pool.Spec.PreAllocatedFloatingIPs) {
+		if err := networkingService.DeleteFloatingIP(pool, ip); err != nil {
+			return ctrl.Result{}, fmt.Errorf("delete floating IP: %w", err)
+		}
+	}
+
 	if controllerutil.RemoveFinalizer(pool, infrav1.OpenStackFloatingIPPoolFinalizer) {
 		log.Info("Removing finalizer from OpenStackFloatingIPPool")
-		return ctrl.Result{Requeue: true}, r.Client.Update(context.Background(), pool)
+		return ctrl.Result{}, r.Client.Update(ctx, pool)
 	}
 	return ctrl.Result{}, nil
 }
