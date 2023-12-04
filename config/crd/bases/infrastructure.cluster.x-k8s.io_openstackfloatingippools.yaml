@@ -39,6 +39,28 @@ spec:
               cloudName:
                 description: The name of the cloud to use from the clouds secret
                 type: string
+              floatingIPNetwork:
+                description: FloatingIPNetwork is the external network to use for
+                  floating ips, if there's only one external network it will be used
+                  by default
+                properties:
+                  description:
+                    type: string
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  notTags:
+                    type: string
+                  notTagsAny:
+                    type: string
+                  projectId:
+                    type: string
+                  tags:
+                    type: string
+                  tagsAny:
+                    type: string
+                type: object
               identityRef:
                 description: IdentityRef is a reference to a identity to be used when
                   reconciling this pool.
@@ -69,6 +91,8 @@ spec:
                 - Retain
                 - Delete
                 type: string
+            required:
+            - floatingIPNetwork
             type: object
           status:
             description: OpenStackFloatingIPPoolStatus defines the observed state
@@ -82,6 +106,28 @@ spec:
                 items:
                   type: string
                 type: array
+              failedIPs:
+                description: FailedIPs contains a list of floating ips that failed
+                  to be allocated
+                items:
+                  type: string
+                type: array
+              floatingIPNetwork:
+                description: floatingIPNetwork contains information about the network
+                  used for floating ips
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  tags:
+                    items:
+                      type: string
+                    type: array
+                required:
+                - id
+                - name
+                type: object
               ips:
                 items:
                   type: string

@@ -51,6 +51,9 @@ type OpenStackFloatingIPPoolSpec struct {
 	// +optional
 	IdentityRef *OpenStackIdentityReference `json:"identityRef,omitempty"`
 
+	// FloatingIPNetwork is the external network to use for floating ips, if there's only one external network it will be used by default
+	FloatingIPNetwork NetworkFilter `json:"floatingIPNetwork"`
+
 	// The name of the cloud to use from the clouds secret
 	// +optional
 	CloudName string `json:"cloudName"`
@@ -64,15 +67,26 @@ type OpenStackFloatingIPPoolSpec struct {
 
 // OpenStackFloatingIPPoolStatus defines the observed state of OpenStackFloatingIPPool.
 type OpenStackFloatingIPPoolStatus struct {
+
 	// +kubebuilder:default={}
 	// +optional
 	ClaimedIPs []string `json:"claimedIPs"`
+
 	// +kubebuilder:default={}
 	// +optional
 	AvailableIPs []string `json:"availableIPs"`
+
 	// +kubebuilder:default={}
 	// +optional
 	IPs []string `json:"ips"`
+
+	// FailedIPs contains a list of floating ips that failed to be allocated
+	// +optional
+	FailedIPs []string `json:"failedIPs,omitempty"`
+
+	// floatingIPNetwork contains information about the network used for floating ips
+	// +optional
+	FloatingIPNetwork *NetworkStatus `json:"floatingIPNetwork,omitempty"`
 }
 
 //+kubebuilder:object:root=true
