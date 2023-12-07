@@ -154,6 +154,7 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 						Name:     pool.Name,
 					},
 					Address: ip,
+					Prefix:  32,
 				},
 			}
 
