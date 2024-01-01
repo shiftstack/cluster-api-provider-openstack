@@ -59,8 +59,7 @@ type OpenStackFloatingIPPoolSpec struct {
 	// The stratergy to use for reclaiming floating ips when they are released from a machine
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Enum=Retain;Delete
-	// +kubebuilder:default=Retain
-	ReclaimPolicy ReclaimPolicy `json:"reclaimPolicy,omitempty"`
+	ReclaimPolicy ReclaimPolicy `json:"reclaimPolicy"`
 }
 
 // OpenStackFloatingIPPoolStatus defines the observed state of OpenStackFloatingIPPool.
