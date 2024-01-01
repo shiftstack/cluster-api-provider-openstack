@@ -51,15 +51,6 @@ type IPAddressReconciler struct {
 //+kubebuilder:rbac:groups=ipam.cluster.x-k8x.io.cluster.x-k8s.io,resources=ipaddresses,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=ipam.cluster.x-k8x.io.cluster.x-k8s.io,resources=ipaddresses/status,verbs=get;update;patch
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the IPAddress object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.6.4/pkg/reconcile
 func (r *IPAddressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx).WithValues("ipaddress", req.NamespacedName)
 
@@ -69,7 +60,6 @@ func (r *IPAddressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	if ipAddress.Spec.PoolRef.Kind != openStackFloatingIPPool {
-		log.Info("IPAddress is not associated with OpenStackFloatingIPPool")
 		return ctrl.Result{}, nil
 	}
 
@@ -94,16 +84,17 @@ func (r *IPAddressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	if !ipAddress.ObjectMeta.DeletionTimestamp.IsZero() {
-		// If the IPAddress has more than one finalizer, it has not been released by machine yet and we should not delete it.
-		if controllerutil.ContainsFinalizer(ipAddress, infrav1.DeleteFloatingIPFinalizer) && len(ipAddress.GetFinalizers()) == 1 {
-			if err = networkingService.DeleteFloatingIP(pool, ipAddress.Spec.Address); err != nil {
-				return ctrl.Result{}, fmt.Errorf("delete floating IP %q: %w", ipAddress.Spec.Address, err)
+		if controllerutil.ContainsFinalizer(ipAddress, infrav1.DeleteFloatingIPFinalizer) {
+			// If the pool has ReclaimPolicy=Delete, and the IP is not pre-allocated, delete the IP.
+			if pool.Spec.ReclaimPolicy == infrav1.ReclaimDelete && !contains(pool.Spec.PreAllocatedFloatingIPs, ipAddress.Spec.Address) {
+				if err = networkingService.DeleteFloatingIP(pool, ipAddress.Spec.Address); err != nil {
+					return ctrl.Result{}, fmt.Errorf("delete floating IP %q: %w", ipAddress.Spec.Address, err)
+				}
 			}
 			controllerutil.RemoveFinalizer(ipAddress, infrav1.DeleteFloatingIPFinalizer)
 			if err := r.Client.Update(ctx, ipAddress); err != nil {
 				return ctrl.Result{}, err
 			}
-			// remove ip from pool status
 			return ctrl.Result{}, nil
 		}
 		scope.Logger().Info("IPAddress is being deleted but has other finalizers, waiting for them to be removed")
