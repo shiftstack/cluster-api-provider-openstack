@@ -5,3 +5,6 @@ exclude:
   global:
     - "vendor/**"
     - "**/vendor/**"
+    - "hack/**"
+    - "test/**"
+    - "**/*_test.go"
