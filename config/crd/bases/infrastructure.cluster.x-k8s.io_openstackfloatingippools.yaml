@@ -84,7 +84,6 @@ spec:
                   type: string
                 type: array
               reclaimPolicy:
-                default: Retain
                 description: The stratergy to use for reclaiming floating ips when
                   they are released from a machine
                 enum:
