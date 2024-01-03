@@ -656,8 +656,8 @@ func (in *OpenStackFloatingIPPoolStatus) DeepCopyInto(out *OpenStackFloatingIPPo
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.IPs != nil {
-		in, out := &in.IPs, &out.IPs
+	if in.AllIPs != nil {
+		in, out := &in.AllIPs, &out.AllIPs
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
