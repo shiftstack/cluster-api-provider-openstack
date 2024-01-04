@@ -52,4 +52,7 @@ const (
 	LoadBalancerMemberErrorReason = "LoadBalancerMemberError"
 	// FloatingIPErrorReason used when the floating ip could not be created or attached.
 	FloatingIPErrorReason = "FloatingIPError"
+
+	// OpenstackFloatingIPPoolReadyCondition reports on the current status of the floating ip pool. Ready indicates that the pool is ready to be used.
+	OpenstackFloatingIPPoolReadyCondition = "OpenstackFloatingIPPoolReadyCondition"
 )

@@ -28,7 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/pointer"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ipamv1 "sigs.k8s.io/cluster-api/exp/ipam/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -73,6 +75,11 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 		return reconcile.Result{}, err
 	}
 
+	// This is done before deleting the pool, because we want to handle deleted IPs before we delete the pool
+	if err := r.reconcileIPAddresses(ctx, scope, pool); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	if pool.ObjectMeta.DeletionTimestamp.IsZero() {
 		// Add finalizer if it does not exist
 		if controllerutil.AddFinalizer(pool, infrav1.OpenStackFloatingIPPoolFinalizer) {
@@ -97,10 +104,6 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 	}()
 
 	if err := r.reconcileFloatingIPNetwork(scope, pool); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if err := r.reconcileIPAddresses(ctx, scope, pool); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -170,7 +173,7 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 			scope.Logger().Info("Claimed IP", "ip", ipAddress.Spec.Address)
 		}
 	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, r.Client.Status().Update(ctx, pool)
 }
 
 func (r *OpenStackFloatingIPPoolReconciler) reconcileDelete(ctx context.Context, scope scope.Scope, pool *infrav1.OpenStackFloatingIPPool) error {
@@ -179,8 +182,9 @@ func (r *OpenStackFloatingIPPoolReconciler) reconcileDelete(ctx context.Context,
 	if err := r.Client.List(ctx, ipAddresses, client.InNamespace(pool.Namespace), client.MatchingFields{infrav1.OpenStackFloatingIPPoolNameIndex: pool.Name}); err != nil {
 		return err
 	}
-	// If there are still IPAddress objects that are not deleted, there are still claims on this pool and we should not delete it
-	// beause the pool is needed to clean up the addresses from openstack
+
+	// If there are still IPAddress objects that are not deleted, there are still claims on this pool and we should not delete the
+	// pool because it is needed to clean up the addresses from openstack
 	if len(ipAddresses.Items) > 0 {
 		log.Info("Waiting for IPAddress to be deleted before deleting OpenStackFloatingIPPool")
 		return errors.New("waiting for IPAddress to be deleted, until we can delete the OpenStackFloatingIPPool")
@@ -267,7 +271,6 @@ func (r *OpenStackFloatingIPPoolReconciler) reconcileIPAddresses(ctx context.Con
 				pool.Status.AvailableIPs = append(pool.Status.AvailableIPs, ipAddress.Spec.Address)
 			}
 		}
-
 		controllerutil.RemoveFinalizer(ipAddress, infrav1.DeleteFloatingIPFinalizer)
 		if err := r.Client.Update(ctx, ipAddress); err != nil {
 			return err
@@ -306,11 +309,13 @@ func (r *OpenStackFloatingIPPoolReconciler) getIP(scope scope.Scope, pool *infra
 	fp, err := networkingService.CreateFloatingIPForPool(pool)
 	if err != nil {
 		scope.Logger().Error(err, "Failed to create floating IP", "pool", pool.Name)
+		conditions.MarkFalse(pool, infrav1.OpenstackFloatingIPPoolReadyCondition, infrav1.OpenStackErrorReason, clusterv1.ConditionSeverityError, "Failed to create floating IP: %v", err)
 		if ip != "" {
 			pool.Status.FailedIPs = append(pool.Status.FailedIPs, ip)
 		}
 		return "", err
 	}
+	conditions.MarkTrue(pool, infrav1.OpenstackFloatingIPPoolReadyCondition)
 
 	ip = fp.FloatingIP
 	pool.Status.ClaimedIPs = append(pool.Status.ClaimedIPs, ip)
