@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	infrav1 "sigs.k8s.io/cluster-api-provider-openstack/api/v1alpha7"
+	infrav1 "sigs.k8s.io/cluster-api-provider-openstack/api/v1alpha8"
 	"sigs.k8s.io/cluster-api-provider-openstack/pkg/cloud/services/networking"
 	"sigs.k8s.io/cluster-api-provider-openstack/pkg/scope"
 	ipamutils "sigs.k8s.io/cluster-api-provider-openstack/pkg/utils/ipam"
@@ -89,6 +89,12 @@ func (r *IPAddressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			if pool.Spec.ReclaimPolicy == infrav1.ReclaimDelete && !contains(pool.Spec.PreAllocatedFloatingIPs, ipAddress.Spec.Address) {
 				if err = networkingService.DeleteFloatingIP(pool, ipAddress.Spec.Address); err != nil {
 					return ctrl.Result{}, fmt.Errorf("delete floating IP %q: %w", ipAddress.Spec.Address, err)
+				}
+			} else if pool.Spec.ReclaimPolicy == infrav1.ReclaimRetain {
+				// Return the IP to available IPs.
+				pool.Status.AvailableIPs = append(pool.Status.AvailableIPs, ipAddress.Spec.Address)
+				if err := r.Client.Status().Update(ctx, pool); err != nil {
+					return ctrl.Result{}, err
 				}
 			}
 			controllerutil.RemoveFinalizer(ipAddress, infrav1.DeleteFloatingIPFinalizer)

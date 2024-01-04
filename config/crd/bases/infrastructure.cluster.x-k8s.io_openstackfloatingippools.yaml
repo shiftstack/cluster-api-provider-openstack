@@ -14,7 +14,7 @@ spec:
     singular: openstackfloatingippool
   scope: Namespaced
   versions:
-  - name: v1alpha7
+  - name: v1alpha8
     schema:
       openAPIV3Schema:
         description: OpenStackFloatingIPPool is the Schema for the openstackfloatingippools
@@ -90,8 +90,6 @@ spec:
                 - Retain
                 - Delete
                 type: string
-            required:
-            - floatingIPNetwork
             type: object
           status:
             description: OpenStackFloatingIPPoolStatus defines the observed state

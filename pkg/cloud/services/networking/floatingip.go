@@ -71,18 +71,15 @@ func (s *Service) GetOrCreateFloatingIP(eventObject runtime.Object, openStackClu
 	return fp, nil
 }
 
-func (s *Service) CreateFloatingIPForPool(pool *infrav1.OpenStackFloatingIPPool, ip string) (*floatingips.FloatingIP, error) {
+func (s *Service) CreateFloatingIPForPool(pool *infrav1.OpenStackFloatingIPPool) (*floatingips.FloatingIP, error) {
 	var fpCreateOpts floatingips.CreateOpts
 
 	fpCreateOpts.FloatingNetworkID = pool.Status.FloatingIPNetwork.ID
 	fpCreateOpts.Description = fmt.Sprintf("Created by cluster-api-provider-openstack OpenStackFloatingIPPool %s", pool.Name)
-	if ip != "" {
-		fpCreateOpts.FloatingIP = ip
-	}
 
 	fp, err := s.client.CreateFloatingIP(fpCreateOpts)
 	if err != nil {
-		record.Warnf(pool, "FailedCreateFloatingIP", "%s failed to create floating IP %s: %v", pool.Name, ip, err)
+		record.Warnf(pool, "FailedCreateFloatingIP", "%s failed to create floating IP: %v", pool.Name, err)
 		return nil, err
 	}
 

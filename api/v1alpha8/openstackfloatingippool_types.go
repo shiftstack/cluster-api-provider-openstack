@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha7
+package v1alpha8
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,6 +50,7 @@ type OpenStackFloatingIPPoolSpec struct {
 	IdentityRef *OpenStackIdentityReference `json:"identityRef,omitempty"`
 
 	// FloatingIPNetwork is the external network to use for floating ips, if there's only one external network it will be used by default
+	// +optional
 	FloatingIPNetwork NetworkFilter `json:"floatingIPNetwork"`
 
 	// The name of the cloud to use from the clouds secret
@@ -86,6 +87,7 @@ type OpenStackFloatingIPPoolStatus struct {
 }
 
 //+kubebuilder:object:root=true
+// +kubebuilder:storageversion
 //+kubebuilder:subresource:status
 
 // OpenStackFloatingIPPool is the Schema for the openstackfloatingippools API.
