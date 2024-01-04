@@ -73,10 +73,6 @@ type OpenStackFloatingIPPoolStatus struct {
 	// +optional
 	AvailableIPs []string `json:"availableIPs"`
 
-	// +kubebuilder:default={}
-	// +optional
-	AllIPs []string `json:"allIPs"`
-
 	// FailedIPs contains a list of floating ips that failed to be allocated
 	// +optional
 	FailedIPs []string `json:"failedIPs,omitempty"`

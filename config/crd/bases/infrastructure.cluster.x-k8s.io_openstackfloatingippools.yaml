@@ -95,10 +95,6 @@ spec:
             description: OpenStackFloatingIPPoolStatus defines the observed state
               of OpenStackFloatingIPPool.
             properties:
-              allIPs:
-                items:
-                  type: string
-                type: array
               availableIPs:
                 items:
                   type: string
