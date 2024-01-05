@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha8
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
@@ -115,6 +117,10 @@ func (r *OpenStackFloatingIPPool) GetConditions() clusterv1.Conditions {
 // SetConditions sets the underlying service state of the OpenStackFloatingIPPool to the predescribed clusterv1.Conditions.
 func (r *OpenStackFloatingIPPool) SetConditions(conditions clusterv1.Conditions) {
 	r.Status.Conditions = conditions
+}
+
+func (r *OpenStackFloatingIPPool) GetFloatingIPTag() string {
+	return fmt.Sprintf("cluster-api-provider-openstack-fip-pool-%s", r.Name)
 }
 
 func init() {

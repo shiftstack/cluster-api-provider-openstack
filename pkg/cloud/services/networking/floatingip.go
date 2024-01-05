@@ -87,6 +87,33 @@ func (s *Service) CreateFloatingIPForPool(pool *infrav1.OpenStackFloatingIPPool)
 	return fp, nil
 }
 
+func (s *Service) TagFloatingIP(ip string, tag string) error {
+	fip, err := s.GetFloatingIP(ip)
+	if err != nil {
+		return err
+	}
+	if fip == nil {
+		return nil
+	}
+
+	mc := metrics.NewMetricPrometheusContext("floating_ip", "update")
+	_, err = s.client.ReplaceAllAttributesTags("floatingips", fip.ID, attributestags.ReplaceAllOpts{
+		Tags: []string{tag},
+	})
+	if mc.ObserveRequest(err) != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) GetFloatingIPsByTag(tag string) ([]floatingips.FloatingIP, error) {
+	fipList, err := s.client.ListFloatingIP(floatingips.ListOpts{Tags: tag})
+	if err != nil {
+		return nil, err
+	}
+	return fipList, nil
+}
+
 func (s *Service) GetFloatingIP(ip string) (*floatingips.FloatingIP, error) {
 	fpList, err := s.client.ListFloatingIP(floatingips.ListOpts{FloatingIP: ip})
 	if err != nil {
