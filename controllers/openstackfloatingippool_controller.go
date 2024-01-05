@@ -49,14 +49,12 @@ const (
 	openStackFloatingIPPool = "OpenStackFloatingIPPool"
 )
 
-var (
-	backoff = wait.Backoff{
-		Steps:    4,
-		Duration: 10 * time.Millisecond,
-		Factor:   5.0,
-		Jitter:   0.1,
-	}
-)
+var backoff = wait.Backoff{
+	Steps:    4,
+	Duration: 10 * time.Millisecond,
+	Factor:   5.0,
+	Jitter:   0.1,
+}
 
 // OpenStackFloatingIPPoolReconciler reconciles a OpenStackFloatingIPPool object.
 type OpenStackFloatingIPPoolReconciler struct {
@@ -132,56 +130,56 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 
 		if claim.Status.AddressRef.Name == "" {
 			ipAddress := &ipamv1.IPAddress{}
-			if err := r.Client.Get(ctx, client.ObjectKey{Name: claim.Name, Namespace: claim.Namespace}, ipAddress); err != nil {
-				if apierrors.IsNotFound(err) {
-					ip, err := r.getIP(scope, pool)
-					if err != nil {
-						return ctrl.Result{}, err
-					}
+			err := r.Client.Get(ctx, client.ObjectKey{Name: claim.Name, Namespace: claim.Namespace}, ipAddress)
+			if client.IgnoreNotFound(err) != nil {
+				return ctrl.Result{}, err
+			}
+			if apierrors.IsNotFound(err) {
+				ip, err := r.getIP(scope, pool)
+				if err != nil {
+					return ctrl.Result{}, err
+				}
 
-					ipAddress = &ipamv1.IPAddress{
-						ObjectMeta: ctrl.ObjectMeta{
-							Name:      claim.Name,
-							Namespace: claim.Namespace,
-							Finalizers: []string{
-								infrav1.DeleteFloatingIPFinalizer,
-							},
-							OwnerReferences: []metav1.OwnerReference{
-								{
-									APIVersion: claim.APIVersion,
-									Kind:       claim.Kind,
-									Name:       claim.Name,
-									UID:        claim.UID,
-								},
+				ipAddress = &ipamv1.IPAddress{
+					ObjectMeta: ctrl.ObjectMeta{
+						Name:      claim.Name,
+						Namespace: claim.Namespace,
+						Finalizers: []string{
+							infrav1.DeleteFloatingIPFinalizer,
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: claim.APIVersion,
+								Kind:       claim.Kind,
+								Name:       claim.Name,
+								UID:        claim.UID,
 							},
 						},
-						Spec: ipamv1.IPAddressSpec{
-							ClaimRef: corev1.LocalObjectReference{
-								Name: claim.Name,
-							},
-							PoolRef: corev1.TypedLocalObjectReference{
-								APIGroup: pointer.String(infrav1.GroupVersion.Group),
-								Kind:     pool.Kind,
-								Name:     pool.Name,
-							},
-							Address: ip,
-							Prefix:  32,
+					},
+					Spec: ipamv1.IPAddressSpec{
+						ClaimRef: corev1.LocalObjectReference{
+							Name: claim.Name,
 						},
-					}
+						PoolRef: corev1.TypedLocalObjectReference{
+							APIGroup: pointer.String(infrav1.GroupVersion.Group),
+							Kind:     pool.Kind,
+							Name:     pool.Name,
+						},
+						Address: ip,
+						Prefix:  32,
+					},
+				}
 
-					// Retry creating the IPAddress object
-					err = wait.ExponentialBackoff(backoff, func() (bool, error) {
-						if err := r.Client.Create(ctx, ipAddress); err != nil {
-							return false, nil
-						}
-						return true, nil
-					})
-					if err != nil {
-						// If we failed to create the IPAddress, there might be an IP leak in OpenStack if we also failed to tag the IP after creation
-						scope.Logger().Error(err, "Failed to create IPAddress", "ip", ip)
-						return ctrl.Result{}, err
+				// Retry creating the IPAddress object
+				err = wait.ExponentialBackoff(backoff, func() (bool, error) {
+					if err := r.Client.Create(ctx, ipAddress); err != nil {
+						return false, err
 					}
-				} else {
+					return true, nil
+				})
+				if err != nil {
+					// If we failed to create the IPAddress, there might be an IP leak in OpenStack if we also failed to tag the IP after creation
+					scope.Logger().Error(err, "Failed to create IPAddress", "ip", ip)
 					return ctrl.Result{}, err
 				}
 			}
@@ -314,17 +312,17 @@ func (r *OpenStackFloatingIPPoolReconciler) getIP(scope scope.Scope, pool *infra
 
 	// Get tagged floating IPs and add them to the available IPs if they are not present in either the available IPs or the claimed IPs
 	// This is done to prevent leaking floating IPs if to prevent leaking floating IPs if the floating IP was created but the IPAddress object was not
-	taggedFIPs, err := networkingService.GetFloatingIPsByTag(pool.GetFloatingIPTag())
+	taggedIPs, err := networkingService.GetFloatingIPsByTag(pool.GetFloatingIPTag())
 	if err != nil {
 		scope.Logger().Error(err, "Failed to get floating IPs by tag", "pool", pool.Name)
 		return "", err
 	}
-	for _, taggedIp := range taggedFIPs {
-		if contains(pool.Status.AvailableIPs, taggedIp.FloatingIP) || contains(pool.Status.ClaimedIPs, taggedIp.FloatingIP) {
+	for _, taggedIP := range taggedIPs {
+		if contains(pool.Status.AvailableIPs, taggedIP.FloatingIP) || contains(pool.Status.ClaimedIPs, taggedIP.FloatingIP) {
 			continue
 		}
-		scope.Logger().Info("Tagged floating IP found that was not known to the pool, adding it to the pool", "ip", taggedIp.FloatingIP)
-		pool.Status.AvailableIPs = append(pool.Status.AvailableIPs, taggedIp.FloatingIP)
+		scope.Logger().Info("Tagged floating IP found that was not known to the pool, adding it to the pool", "ip", taggedIP.FloatingIP)
+		pool.Status.AvailableIPs = append(pool.Status.AvailableIPs, taggedIP.FloatingIP)
 	}
 
 	if len(pool.Status.AvailableIPs) > 0 {
@@ -361,7 +359,6 @@ func (r *OpenStackFloatingIPPoolReconciler) getIP(scope scope.Scope, pool *infra
 			}
 			return true, nil
 		})
-
 		if err != nil {
 			scope.Logger().Error(err, "Failed to tag floating IP", "ip", fp.FloatingIP, "tag", tag)
 		}
