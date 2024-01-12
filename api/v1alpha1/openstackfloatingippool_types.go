@@ -14,13 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha8
+package v1alpha1
 
 import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+
+	// We use v1alpha7 here rather than anything newer because as of writing
+	// it is the newest API version we should no longer be making breaking
+	// changes to. If we bump this we need to look carefully for resulting
+	// CRD changes in v1alpha1 to ensure they are compatible.
+	"sigs.k8s.io/cluster-api-provider-openstack/api/v1alpha7"
 )
 
 const (
@@ -50,11 +56,11 @@ type OpenStackFloatingIPPoolSpec struct {
 
 	// IdentityRef is a reference to a identity to be used when reconciling this pool.
 	// +optional
-	IdentityRef *OpenStackIdentityReference `json:"identityRef,omitempty"`
+	IdentityRef *v1alpha7.OpenStackIdentityReference `json:"identityRef,omitempty"`
 
 	// FloatingIPNetwork is the external network to use for floating ips, if there's only one external network it will be used by default
 	// +optional
-	FloatingIPNetwork NetworkFilter `json:"floatingIPNetwork"`
+	FloatingIPNetwork v1alpha7.NetworkFilter `json:"floatingIPNetwork"`
 
 	// The name of the cloud to use from the clouds secret
 	// +optional
@@ -82,7 +88,7 @@ type OpenStackFloatingIPPoolStatus struct {
 
 	// floatingIPNetwork contains information about the network used for floating ips
 	// +optional
-	FloatingIPNetwork *NetworkStatus `json:"floatingIPNetwork,omitempty"`
+	FloatingIPNetwork *v1alpha7.NetworkStatus `json:"floatingIPNetwork,omitempty"`
 
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }

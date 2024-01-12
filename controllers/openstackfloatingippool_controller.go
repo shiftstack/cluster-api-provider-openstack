@@ -40,6 +40,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"sigs.k8s.io/cluster-api-provider-openstack/api/v1alpha1"
+	"sigs.k8s.io/cluster-api-provider-openstack/api/v1alpha7"
 	infrav1 "sigs.k8s.io/cluster-api-provider-openstack/api/v1alpha8"
 	"sigs.k8s.io/cluster-api-provider-openstack/pkg/cloud/services/networking"
 	"sigs.k8s.io/cluster-api-provider-openstack/pkg/scope"
@@ -74,7 +76,7 @@ type OpenStackFloatingIPPoolReconciler struct {
 
 func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx)
-	pool := &infrav1.OpenStackFloatingIPPool{}
+	pool := &v1alpha1.OpenStackFloatingIPPool{}
 	if err := r.Client.Get(ctx, req.NamespacedName, pool); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -91,7 +93,7 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 
 	if pool.ObjectMeta.DeletionTimestamp.IsZero() {
 		// Add finalizer if it does not exist
-		if controllerutil.AddFinalizer(pool, infrav1.OpenStackFloatingIPPoolFinalizer) {
+		if controllerutil.AddFinalizer(pool, v1alpha1.OpenStackFloatingIPPoolFinalizer) {
 			return ctrl.Result{}, r.Client.Update(ctx, pool)
 		}
 	} else {
@@ -117,7 +119,7 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 	}
 
 	claims := &ipamv1.IPAddressClaimList{}
-	if err := r.Client.List(context.Background(), claims, client.InNamespace(req.Namespace), client.MatchingFields{infrav1.OpenStackFloatingIPPoolNameIndex: pool.Name}); err != nil {
+	if err := r.Client.List(context.Background(), claims, client.InNamespace(req.Namespace), client.MatchingFields{v1alpha1.OpenStackFloatingIPPoolNameIndex: pool.Name}); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -145,7 +147,7 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 						Name:      claim.Name,
 						Namespace: claim.Namespace,
 						Finalizers: []string{
-							infrav1.DeleteFloatingIPFinalizer,
+							v1alpha1.DeleteFloatingIPFinalizer,
 						},
 						OwnerReferences: []metav1.OwnerReference{
 							{
@@ -161,7 +163,7 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 							Name: claim.Name,
 						},
 						PoolRef: corev1.TypedLocalObjectReference{
-							APIGroup: pointer.String(infrav1.GroupVersion.Group),
+							APIGroup: pointer.String(v1alpha1.GroupVersion.Group),
 							Kind:     pool.Kind,
 							Name:     pool.Name,
 						},
@@ -194,10 +196,10 @@ func (r *OpenStackFloatingIPPoolReconciler) Reconcile(ctx context.Context, req c
 	return ctrl.Result{}, r.Client.Status().Update(ctx, pool)
 }
 
-func (r *OpenStackFloatingIPPoolReconciler) reconcileDelete(ctx context.Context, scope scope.Scope, pool *infrav1.OpenStackFloatingIPPool) error {
+func (r *OpenStackFloatingIPPoolReconciler) reconcileDelete(ctx context.Context, scope scope.Scope, pool *v1alpha1.OpenStackFloatingIPPool) error {
 	log := ctrl.LoggerFrom(ctx)
 	ipAddresses := &ipamv1.IPAddressList{}
-	if err := r.Client.List(ctx, ipAddresses, client.InNamespace(pool.Namespace), client.MatchingFields{infrav1.OpenStackFloatingIPPoolNameIndex: pool.Name}); err != nil {
+	if err := r.Client.List(ctx, ipAddresses, client.InNamespace(pool.Namespace), client.MatchingFields{v1alpha1.OpenStackFloatingIPPoolNameIndex: pool.Name}); err != nil {
 		return err
 	}
 
@@ -221,7 +223,7 @@ func (r *OpenStackFloatingIPPoolReconciler) reconcileDelete(ctx context.Context,
 		pool.Status.AvailableIPs = diff(pool.Status.AvailableIPs, []string{ip})
 	}
 
-	if controllerutil.RemoveFinalizer(pool, infrav1.OpenStackFloatingIPPoolFinalizer) {
+	if controllerutil.RemoveFinalizer(pool, v1alpha1.OpenStackFloatingIPPoolFinalizer) {
 		log.Info("Removing finalizer from OpenStackFloatingIPPool")
 		return r.Client.Update(ctx, pool)
 	}
@@ -258,9 +260,9 @@ func diff(a []string, b []string) []string {
 	return result
 }
 
-func (r *OpenStackFloatingIPPoolReconciler) reconcileIPAddresses(ctx context.Context, scope scope.Scope, pool *infrav1.OpenStackFloatingIPPool) error {
+func (r *OpenStackFloatingIPPoolReconciler) reconcileIPAddresses(ctx context.Context, scope scope.Scope, pool *v1alpha1.OpenStackFloatingIPPool) error {
 	ipAddresses := &ipamv1.IPAddressList{}
-	if err := r.Client.List(ctx, ipAddresses, client.InNamespace(pool.Namespace), client.MatchingFields{infrav1.OpenStackFloatingIPPoolNameIndex: pool.Name}); err != nil {
+	if err := r.Client.List(ctx, ipAddresses, client.InNamespace(pool.Namespace), client.MatchingFields{v1alpha1.OpenStackFloatingIPPoolNameIndex: pool.Name}); err != nil {
 		return err
 	}
 
@@ -280,8 +282,8 @@ func (r *OpenStackFloatingIPPoolReconciler) reconcileIPAddresses(ctx context.Con
 			continue
 		}
 
-		if controllerutil.ContainsFinalizer(ipAddress, infrav1.DeleteFloatingIPFinalizer) {
-			if pool.Spec.ReclaimPolicy == infrav1.ReclaimDelete && !contains(pool.Spec.PreAllocatedFloatingIPs, ipAddress.Spec.Address) {
+		if controllerutil.ContainsFinalizer(ipAddress, v1alpha1.DeleteFloatingIPFinalizer) {
+			if pool.Spec.ReclaimPolicy == v1alpha1.ReclaimDelete && !contains(pool.Spec.PreAllocatedFloatingIPs, ipAddress.Spec.Address) {
 				if err = networkingService.DeleteFloatingIP(pool, ipAddress.Spec.Address); err != nil {
 					return fmt.Errorf("delete floating IP %q: %w", ipAddress.Spec.Address, err)
 				}
@@ -289,7 +291,7 @@ func (r *OpenStackFloatingIPPoolReconciler) reconcileIPAddresses(ctx context.Con
 				pool.Status.AvailableIPs = append(pool.Status.AvailableIPs, ipAddress.Spec.Address)
 			}
 		}
-		controllerutil.RemoveFinalizer(ipAddress, infrav1.DeleteFloatingIPFinalizer)
+		controllerutil.RemoveFinalizer(ipAddress, v1alpha1.DeleteFloatingIPFinalizer)
 		if err := r.Client.Update(ctx, ipAddress); err != nil {
 			return err
 		}
@@ -300,7 +302,7 @@ func (r *OpenStackFloatingIPPoolReconciler) reconcileIPAddresses(ctx context.Con
 	return nil
 }
 
-func (r *OpenStackFloatingIPPoolReconciler) getIP(scope scope.Scope, pool *infrav1.OpenStackFloatingIPPool) (string, error) {
+func (r *OpenStackFloatingIPPoolReconciler) getIP(scope scope.Scope, pool *v1alpha1.OpenStackFloatingIPPool) (string, error) {
 	// There's a potential leak of IPs here, if the reconcile loop fails after we claim an IP but before we create the IPAddress object.
 	var ip string
 
@@ -343,7 +345,7 @@ func (r *OpenStackFloatingIPPoolReconciler) getIP(scope scope.Scope, pool *infra
 	fp, err := networkingService.CreateFloatingIPForPool(pool)
 	if err != nil {
 		scope.Logger().Error(err, "Failed to create floating IP", "pool", pool.Name)
-		conditions.MarkFalse(pool, infrav1.OpenstackFloatingIPPoolReadyCondition, infrav1.OpenStackErrorReason, clusterv1.ConditionSeverityError, "Failed to create floating IP: %v", err)
+		conditions.MarkFalse(pool, v1alpha1.OpenstackFloatingIPPoolReadyCondition, infrav1.OpenStackErrorReason, clusterv1.ConditionSeverityError, "Failed to create floating IP: %v", err)
 		if ip != "" {
 			pool.Status.FailedIPs = append(pool.Status.FailedIPs, ip)
 		}
@@ -364,14 +366,14 @@ func (r *OpenStackFloatingIPPoolReconciler) getIP(scope scope.Scope, pool *infra
 		}
 	}()
 
-	conditions.MarkTrue(pool, infrav1.OpenstackFloatingIPPoolReadyCondition)
+	conditions.MarkTrue(pool, v1alpha1.OpenstackFloatingIPPoolReadyCondition)
 
 	ip = fp.FloatingIP
 	pool.Status.ClaimedIPs = append(pool.Status.ClaimedIPs, ip)
 	return ip, nil
 }
 
-func (r *OpenStackFloatingIPPoolReconciler) reconcileFloatingIPNetwork(scope scope.Scope, pool *infrav1.OpenStackFloatingIPPool) error {
+func (r *OpenStackFloatingIPPoolReconciler) reconcileFloatingIPNetwork(scope scope.Scope, pool *v1alpha1.OpenStackFloatingIPPool) error {
 	// If the pool already has a network, we don't need to do anything
 	if pool.Status.FloatingIPNetwork != nil {
 		return nil
@@ -395,7 +397,7 @@ func (r *OpenStackFloatingIPPoolReconciler) reconcileFloatingIPNetwork(scope sco
 		return fmt.Errorf("found multiple networks, expects filter to match one (result: %v)", networkList)
 	}
 
-	pool.Status.FloatingIPNetwork = &infrav1.NetworkStatus{
+	pool.Status.FloatingIPNetwork = &v1alpha7.NetworkStatus{
 		ID:   networkList[0].ID,
 		Name: networkList[0].Name,
 		Tags: networkList[0].Tags,
@@ -440,7 +442,7 @@ func (r *OpenStackFloatingIPPoolReconciler) ipAddressToPoolMapper(_ context.Cont
 }
 
 func (r *OpenStackFloatingIPPoolReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &ipamv1.IPAddressClaim{}, infrav1.OpenStackFloatingIPPoolNameIndex, func(rawObj client.Object) []string {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &ipamv1.IPAddressClaim{}, v1alpha1.OpenStackFloatingIPPoolNameIndex, func(rawObj client.Object) []string {
 		claim := rawObj.(*ipamv1.IPAddressClaim)
 		if claim.Spec.PoolRef.Kind != openStackFloatingIPPool {
 			return nil
@@ -450,7 +452,7 @@ func (r *OpenStackFloatingIPPoolReconciler) SetupWithManager(ctx context.Context
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &ipamv1.IPAddress{}, infrav1.OpenStackFloatingIPPoolNameIndex, func(rawObj client.Object) []string {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &ipamv1.IPAddress{}, v1alpha1.OpenStackFloatingIPPoolNameIndex, func(rawObj client.Object) []string {
 		ip := rawObj.(*ipamv1.IPAddress)
 		return []string{ip.Spec.PoolRef.Name}
 	}); err != nil {
@@ -458,7 +460,7 @@ func (r *OpenStackFloatingIPPoolReconciler) SetupWithManager(ctx context.Context
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&infrav1.OpenStackFloatingIPPool{}).
+		For(&v1alpha1.OpenStackFloatingIPPool{}).
 		Watches(
 			&ipamv1.IPAddressClaim{},
 			handler.EnqueueRequestsFromMapFunc(r.ipAddressClaimToPoolMapper),

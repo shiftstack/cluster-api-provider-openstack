@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"sigs.k8s.io/cluster-api-provider-openstack/api/v1alpha1"
 	infrav1 "sigs.k8s.io/cluster-api-provider-openstack/api/v1alpha8"
 	"sigs.k8s.io/cluster-api-provider-openstack/pkg/metrics"
 	"sigs.k8s.io/cluster-api-provider-openstack/pkg/record"
@@ -71,7 +72,7 @@ func (s *Service) GetOrCreateFloatingIP(eventObject runtime.Object, openStackClu
 	return fp, nil
 }
 
-func (s *Service) CreateFloatingIPForPool(pool *infrav1.OpenStackFloatingIPPool) (*floatingips.FloatingIP, error) {
+func (s *Service) CreateFloatingIPForPool(pool *v1alpha1.OpenStackFloatingIPPool) (*floatingips.FloatingIP, error) {
 	var fpCreateOpts floatingips.CreateOpts
 
 	fpCreateOpts.FloatingNetworkID = pool.Status.FloatingIPNetwork.ID
