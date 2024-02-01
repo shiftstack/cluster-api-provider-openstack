@@ -27,3 +27,22 @@ func Unique(s []string) []string {
 	}
 	return result
 }
+
+func CompareLists(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for _, v := range a {
+		eq := false
+		for _, v2 := range b {
+			if v == v2 {
+				eq = true
+				break
+			}
+		}
+		if !eq {
+			return false
+		}
+	}
+	return true
+}
