@@ -17,52 +17,42 @@ limitations under the License.
 package strings
 
 import (
+	"slices"
 	"testing"
 )
 
-func TestCompareLists(t *testing.T) {
+func TestCanonicalize(t *testing.T) {
 	tests := []struct {
-		name string
-		a    []string
-		b    []string
-		want bool
+		name  string
+		value []string
+		want  []string
 	}{
 		{
-			name: "Empty lists",
-			a:    []string{},
-			b:    []string{},
-			want: true,
+			name:  "Empty list",
+			value: []string{},
+			want:  []string{},
 		},
 		{
-			name: "Equal lists",
-			a:    []string{"a", "b", "c"},
-			b:    []string{"a", "b", "c"},
-			want: true,
+			name:  "Identity",
+			value: []string{"a", "b", "c"},
+			want:  []string{"a", "b", "c"},
 		},
 		{
-			name: "Different order",
-			a:    []string{"a", "b", "c"},
-			b:    []string{"c", "b", "a"},
-			want: true,
+			name:  "Out of order",
+			value: []string{"c", "b", "a"},
+			want:  []string{"a", "b", "c"},
 		},
 		{
-			name: "Different elements",
-			a:    []string{"a", "b", "c"},
-			b:    []string{"d", "e", "f"},
-			want: false,
-		},
-		{
-			name: "Different lengths",
-			a:    []string{"a", "b", "c"},
-			b:    []string{"a", "b"},
-			want: false,
+			name:  "Duplicate elements",
+			value: []string{"c", "b", "a", "c"},
+			want:  []string{"a", "b", "c"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := CompareLists(tt.a, tt.b)
-			if got != tt.want {
+			got := Canonicalize(tt.value)
+			if !slices.Equal(got, tt.want) {
 				t.Errorf("CompareLists() = %v, want %v", got, tt.want)
 			}
 		})

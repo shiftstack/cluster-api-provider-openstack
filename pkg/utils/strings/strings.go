@@ -16,33 +16,12 @@ limitations under the License.
 
 package strings
 
-func Unique(s []string) []string {
-	inResult := make(map[string]bool)
-	var result []string
-	for _, str := range s {
-		if _, ok := inResult[str]; !ok {
-			inResult[str] = true
-			result = append(result, str)
-		}
-	}
-	return result
-}
+import (
+	"cmp"
+	"slices"
+)
 
-func CompareLists(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for _, v := range a {
-		eq := false
-		for _, v2 := range b {
-			if v == v2 {
-				eq = true
-				break
-			}
-		}
-		if !eq {
-			return false
-		}
-	}
-	return true
+func Canonicalize[S ~[]E, E cmp.Ordered](s S) S {
+	slices.Sort(s)
+	return slices.Compact(s)
 }
