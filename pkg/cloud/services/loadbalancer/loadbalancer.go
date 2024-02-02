@@ -19,7 +19,6 @@ package loadbalancer
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/listeners"
