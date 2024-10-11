@@ -16,75 +16,21 @@ limitations under the License.
 
 package v1alpha1
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-// +kubebuilder:validation:Enum:=AdoptOrCreate;Adopt
-type ControllerOptionsOnCreate string
-
-// +kubebuilder:validation:Enum:=Delete;Retain
-type ControllerOptionsOnDelete string
+// +kubebuilder:validation:Enum:=managed;unmanaged;deleteOnDetach
+type ManagementPolicy string
 
 const (
-	// ControllerOptionsOnCreateAdoptOrCreate specifies that the controller will
-	// attempt to adopt a resource with the expected name if one exists, or
-	// create a new resource if it does not.
-	ControllerOptionsOnCreateAdoptOrCreate ControllerOptionsOnCreate = "AdoptOrCreate"
+	// ManagementPolicyManaged specifies that the controller will reconcile the
+	// state of the referenced OpenStack resource with the state of the ORC
+	// object.
+	ManagementPolicyManaged ManagementPolicy = "managed"
 
-	// ControllerOptionsOnCreateAdopt specifies that the controller will wait
-	// for the resource to exist, and will not create it.
-	ControllerOptionsOnCreateAdopt ControllerOptionsOnCreate = "Adopt"
+	// ManagementPolicyUnmanaged specifies that the controller will not make any
+	// changes to the referenced OpenStack resource.
+	ManagementPolicyUnmanaged ManagementPolicy = "unmanaged"
 
-	// ControllerOptionsOnDeleteDelete specifies that the controller will delete
-	// the resource when the kubernetes object owning it is deleted.
-	ControllerOptionsOnDeleteDelete ControllerOptionsOnDelete = "Delete"
-
-	// ControllerOptionsOnDeleteRetain specifies that the controller will not
-	// delete the resource when the kubernetes object owning it is deleted.
-	ControllerOptionsOnDeleteRetain ControllerOptionsOnDelete = "Retain"
+	// ManagementPolicyDetachOnDelete has the same behaviour as
+	// ManagementPolicyManaged, except that the controller will not delete the
+	// OpenStack resource when the ORC object is deleted.
+	ManagementPolicyDetachOnDelete ManagementPolicy = "detachOnDelete"
 )
-
-type ControllerOptions struct {
-	// OnCreate defines the controller's behaviour when creating a resource.
-	// If not specified, the default is AdoptOrCreate.
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="onCreate is immutable"
-	// +optional
-	OnCreate *ControllerOptionsOnCreate `json:"onCreate,omitempty"`
-
-	// OnDelete defines the controller's behaviour when deleting a resource. If
-	// not specified, the default is Delete.
-	// +optional
-	OnDelete *ControllerOptionsOnDelete `json:"onDelete,omitempty"`
-}
-
-// ObjectWithControllerOptions is a metav1.Object which also has ControllerOptions
-// +kubebuilder:object:generate:=false
-type ObjectWithControllerOptions interface {
-	metav1.Object
-	GetControllerOptions() *ControllerOptions
-}
-
-// GetOnCreate returns the value of OnCreate from ControllerOptions, or
-// the default, AdoptOrCreate, if it is not set.
-func (o *ControllerOptions) GetOnCreate() ControllerOptionsOnCreate {
-	const defaultOnCreate = ControllerOptionsOnCreateAdoptOrCreate
-
-	if o == nil || o.OnCreate == nil {
-		return defaultOnCreate
-	}
-
-	return *o.OnCreate
-}
-
-// GetOnDelete returns the value of OnDelete from ControllerOptions, or
-// the default, Delete, if it is not set.
-func (o *ControllerOptions) GetOnDelete() ControllerOptionsOnDelete {
-	const defaultOnDelete = ControllerOptionsOnDeleteDelete
-
-	if o == nil || o.OnDelete == nil {
-		return defaultOnDelete
-	}
-
-	return *o.OnDelete
-}

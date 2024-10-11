@@ -46,19 +46,10 @@ var schemaYAML = typed.YAMLObject(`types:
       type:
         scalar: string
       default: ""
-    - name: name
+    - name: secretName
       type:
         scalar: string
       default: ""
-- name: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ControllerOptions
-  map:
-    fields:
-    - name: onCreate
-      type:
-        scalar: string
-    - name: onDelete
-      type:
-        scalar: string
 - name: com.github.k-orc.openstack-resource-controller.api.v1alpha1.Image
   map:
     fields:
@@ -98,6 +89,15 @@ var schemaYAML = typed.YAMLObject(`types:
     - name: sourceURL
       type:
         namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageContentSourceURL
+    unions:
+    - discriminator: sourceType
+      fields:
+      - fieldName: containerFormat
+        discriminatorValue: ContainerFormat
+      - fieldName: diskFormat
+        discriminatorValue: DiskFormat
+      - fieldName: sourceURL
+        discriminatorValue: SourceURL
 - name: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageContentSourceURL
   map:
     fields:
@@ -111,6 +111,12 @@ var schemaYAML = typed.YAMLObject(`types:
       type:
         scalar: string
       default: ""
+- name: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageFilter
+  map:
+    fields:
+    - name: name
+      type:
+        scalar: string
 - name: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageHash
   map:
     fields:
@@ -122,6 +128,15 @@ var schemaYAML = typed.YAMLObject(`types:
       type:
         scalar: string
       default: ""
+- name: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageImport
+  map:
+    fields:
+    - name: filter
+      type:
+        namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageFilter
+    - name: id
+      type:
+        scalar: string
 - name: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageProperties
   map:
     fields:
@@ -164,20 +179,13 @@ var schemaYAML = typed.YAMLObject(`types:
     - name: vifModel
       type:
         scalar: string
-- name: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageSpec
+- name: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageResourceSpec
   map:
     fields:
-    - name: cloudCredentialsRef
-      type:
-        namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.CloudCredentialsReference
-      default: {}
     - name: content
       type:
         namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageContent
-    - name: controllerOptions
-      type:
-        namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ControllerOptions
-    - name: imageName
+    - name: name
       type:
         scalar: string
     - name: properties
@@ -195,6 +203,38 @@ var schemaYAML = typed.YAMLObject(`types:
     - name: visibility
       type:
         scalar: string
+- name: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageResourceStatus
+  map:
+    fields:
+    - name: hash
+      type:
+        namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageHash
+    - name: sizeB
+      type:
+        scalar: numeric
+    - name: status
+      type:
+        scalar: string
+    - name: virtualSizeB
+      type:
+        scalar: numeric
+- name: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageSpec
+  map:
+    fields:
+    - name: cloudCredentialsRef
+      type:
+        namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.CloudCredentialsReference
+      default: {}
+    - name: import
+      type:
+        namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageImport
+    - name: managementPolicy
+      type:
+        scalar: string
+      default: ""
+    - name: resource
+      type:
+        namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageResourceSpec
 - name: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageStatus
   map:
     fields:
@@ -209,21 +249,12 @@ var schemaYAML = typed.YAMLObject(`types:
     - name: downloadAttempts
       type:
         scalar: numeric
-    - name: hash
-      type:
-        namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageHash
-    - name: imageID
+    - name: id
       type:
         scalar: string
-    - name: sizeB
+    - name: resource
       type:
-        scalar: numeric
-    - name: status
-      type:
-        scalar: string
-    - name: virtualSizeB
-      type:
-        scalar: numeric
+        namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageResourceStatus
 - name: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
   map:
     fields:
