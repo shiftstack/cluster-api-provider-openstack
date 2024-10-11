@@ -28,6 +28,7 @@ type ImageSpecApplyConfiguration struct {
 	Import              *ImageImportApplyConfiguration               `json:"import,omitempty"`
 	Resource            *ImageResourceSpecApplyConfiguration         `json:"resource,omitempty"`
 	ManagementPolicy    *apiv1alpha1.ManagementPolicy                `json:"managementPolicy,omitempty"`
+	ManagedOptions      *ManagedOptionsApplyConfiguration            `json:"managedOptions,omitempty"`
 	CloudCredentialsRef *CloudCredentialsReferenceApplyConfiguration `json:"cloudCredentialsRef,omitempty"`
 }
 
@@ -58,6 +59,14 @@ func (b *ImageSpecApplyConfiguration) WithResource(value *ImageResourceSpecApply
 // If called multiple times, the ManagementPolicy field is set to the value of the last call.
 func (b *ImageSpecApplyConfiguration) WithManagementPolicy(value apiv1alpha1.ManagementPolicy) *ImageSpecApplyConfiguration {
 	b.ManagementPolicy = &value
+	return b
+}
+
+// WithManagedOptions sets the ManagedOptions field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the ManagedOptions field is set to the value of the last call.
+func (b *ImageSpecApplyConfiguration) WithManagedOptions(value *ManagedOptionsApplyConfiguration) *ImageSpecApplyConfiguration {
+	b.ManagedOptions = value
 	return b
 }
 

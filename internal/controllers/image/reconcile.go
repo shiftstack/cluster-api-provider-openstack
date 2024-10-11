@@ -247,8 +247,14 @@ func (r *orcImageReconciler) reconcileDelete(ctx context.Context, orcImage *orcv
 		}
 	}()
 
-	// We only want to delete the object if the management policy is 'managed'
-	if orcImage.Spec.ManagementPolicy == orcv1alpha1.ManagementPolicyManaged {
+	// We won't delete the resource for an unmanaged object, or if deletePolicy is detach
+	if orcImage.Spec.ManagementPolicy == orcv1alpha1.ManagementPolicyUnmanaged || orcImage.Spec.ManagedOptions.GetDeletePolicy() == orcv1alpha1.DeletePolicyDetach {
+		logPolicy := []any{"managementPolicy", orcImage.Spec.ManagementPolicy}
+		if orcImage.Spec.ManagementPolicy == orcv1alpha1.ManagementPolicyManaged {
+			logPolicy = append(logPolicy, "deletePolicy", orcImage.Spec.ManagedOptions.GetDeletePolicy())
+		}
+		log.V(4).Info("Not deleting Glance image due to policy", logPolicy...)
+	} else {
 		imageClient, err := r.getImageClient(ctx, orcImage)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -272,8 +278,6 @@ func (r *orcImageReconciler) reconcileDelete(ctx context.Context, orcImage *orcv
 		}
 
 		log.V(4).Info("Image is deleted")
-	} else {
-		log.V(4).Info("Not deleting Glance image due to policy", "managementPolicy", orcImage.Spec.ManagementPolicy)
 	}
 
 	deleted = true

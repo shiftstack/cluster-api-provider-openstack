@@ -354,10 +354,11 @@ type ImageImport struct {
 }
 
 // ImageSpec defines the desired state of an Image.
-// +kubebuilder:validation:XValidation:rule="self.managementPolicy != 'unmanaged' ? has(self.resource) : true",message="resource must be specified when policy is managed"
-// +kubebuilder:validation:XValidation:rule="self.managementPolicy != 'unmanaged' ? !has(self.__import__) : true",message="import may not be specified when policy is managed"
+// +kubebuilder:validation:XValidation:rule="self.managementPolicy == 'managed' ? has(self.resource) : true",message="resource must be specified when policy is managed"
+// +kubebuilder:validation:XValidation:rule="self.managementPolicy == 'managed' ? !has(self.__import__) : true",message="import may not be specified when policy is managed"
 // +kubebuilder:validation:XValidation:rule="self.managementPolicy == 'unmanaged' ? !has(self.resource) : true",message="resource may not be specified when policy is unmanaged"
 // +kubebuilder:validation:XValidation:rule="self.managementPolicy == 'unmanaged' ? has(self.__import__) : true",message="import must be specified when policy is unmanaged"
+// +kubebuilder:validation:XValidation:rule="has(self.managedOptions) ? self.managementPolicy == 'managed' : true",message="managedOptions may only be provided when policy is managed"
 // +kubebuilder:validation:XValidation:rule="!has(self.__import__) ? has(self.resource.content) : true",message="resource content must be specified when not importing"
 type ImageSpec struct {
 	// Import refers to an existing image which will be imported instead of
@@ -369,18 +370,22 @@ type ImageSpec struct {
 	//
 	// Resource may not be specified if the management policy is `unmanaged`.
 	//
-	// Resource must be specified when the management policy is `managed` or `detachOnDelete`.
+	// Resource must be specified when the management policy is `managed`.
 	// +optional
 	Resource *ImageResourceSpec `json:"resource,omitempty"`
 
 	// ManagementPolicy defines how ORC will treat the object. Valid values are
 	// `managed`: ORC will create, update, and delete the resource; `unmanaged`:
 	// ORC will import an existing image, and will not apply updates to it or
-	// delete it; `detachOnDelete`: identical to `managed`, but ORC will not
-	// delete the OpenStack resource when the ORC object is deleted.
+	// delete it.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="managementPolicy is immutable"
 	// +kubebuilder:default:=managed
 	// +optional
 	ManagementPolicy ManagementPolicy `json:"managementPolicy,omitempty"`
+
+	// ManagedOptions specifies options which may be applied to managed objects.
+	// +optional
+	ManagedOptions *ManagedOptions `json:"managedOptions,omitempty"`
 
 	// CloudCredentialsRef points to a secret containing OpenStack credentials
 	// +kubebuilder:validation:Required
@@ -449,7 +454,7 @@ func (i *Image) GetConditions() []metav1.Condition {
 // +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="ID",type="string",JSONPath=".status.ID",description="Glance image ID"
+// +kubebuilder:printcolumn:name="ID",type="string",JSONPath=".status.id",description="Glance image ID"
 // +kubebuilder:printcolumn:name="Available",type="string",JSONPath=".status.conditions[?(@.type=='Available')].status",description="Availability status of image"
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Available')].message",description="Message describing current availability status"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="Time duration since creation"

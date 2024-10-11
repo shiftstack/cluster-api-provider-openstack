@@ -16,7 +16,7 @@ limitations under the License.
 
 package v1alpha1
 
-// +kubebuilder:validation:Enum:=managed;unmanaged;deleteOnDetach
+// +kubebuilder:validation:Enum:=managed;unmanaged
 type ManagementPolicy string
 
 const (
@@ -25,12 +25,41 @@ const (
 	// object.
 	ManagementPolicyManaged ManagementPolicy = "managed"
 
-	// ManagementPolicyUnmanaged specifies that the controller will not make any
-	// changes to the referenced OpenStack resource.
+	// ManagementPolicyUnmanaged specifies that the controller will expect the
+	// resource to either exist already or to be created externally. The
+	// controller will not make any changes to the referenced OpenStack
+	// resource.
 	ManagementPolicyUnmanaged ManagementPolicy = "unmanaged"
-
-	// ManagementPolicyDetachOnDelete has the same behaviour as
-	// ManagementPolicyManaged, except that the controller will not delete the
-	// OpenStack resource when the ORC object is deleted.
-	ManagementPolicyDetachOnDelete ManagementPolicy = "detachOnDelete"
 )
+
+// +kubebuilder:validation:Enum:=delete;detach
+type DeletePolicy string
+
+const (
+	// DeletePolicyDelete specifies that the OpenStack resource will be deleted
+	// when the managed ORC object is deleted.
+	DeletePolicyDelete DeletePolicy = "delete"
+
+	// DeletePolicyDetach specifies that the OpenStack resource will not be
+	// deleted when the managed ORC object is deleted.
+	DeletePolicyDetach DeletePolicy = "detach"
+)
+
+type ManagedOptions struct {
+	// DeletePolicy specified the behaviour of the controller when the ORC
+	// object is deleted. Options are `delete` - delete the OpenStack resource;
+	// `detach` - do not delete the OpenStack resource. If not specified, the
+	// default is `delete`.
+	// +kubebuilder:default:=delete
+	// +optional
+	DeletePolicy DeletePolicy `json:"deletePolicy,omitempty"`
+}
+
+// GetDeletePolicy returns DeletePolicy from the ManagedOptions. If called on a
+// nil receiver it safely returns the default.
+func (o *ManagedOptions) GetDeletePolicy() DeletePolicy {
+	if o == nil {
+		return DeletePolicyDelete
+	}
+	return o.DeletePolicy
+}

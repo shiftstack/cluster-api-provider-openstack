@@ -43,6 +43,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/k-orc/openstack-resource-controller/api/v1alpha1.ImageResourceStatus":       schema_k_orc_openstack_resource_controller_api_v1alpha1_ImageResourceStatus(ref),
 		"github.com/k-orc/openstack-resource-controller/api/v1alpha1.ImageSpec":                 schema_k_orc_openstack_resource_controller_api_v1alpha1_ImageSpec(ref),
 		"github.com/k-orc/openstack-resource-controller/api/v1alpha1.ImageStatus":               schema_k_orc_openstack_resource_controller_api_v1alpha1_ImageStatus(ref),
+		"github.com/k-orc/openstack-resource-controller/api/v1alpha1.ManagedOptions":            schema_k_orc_openstack_resource_controller_api_v1alpha1_ManagedOptions(ref),
 		"k8s.io/api/core/v1.AWSElasticBlockStoreVolumeSource":                                   schema_k8sio_api_core_v1_AWSElasticBlockStoreVolumeSource(ref),
 		"k8s.io/api/core/v1.Affinity":                                    schema_k8sio_api_core_v1_Affinity(ref),
 		"k8s.io/api/core/v1.AppArmorProfile":                             schema_k8sio_api_core_v1_AppArmorProfile(ref),
@@ -409,7 +410,6 @@ func schema_k_orc_openstack_resource_controller_api_v1alpha1_ImageContent(ref co
 					"containerFormat": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ContainerFormat is the format of the image container. qcow2 and raw images do not usually have a container. This is specified as \"bare\", which is also the default. Permitted values are ami, ari, aki, bare, ovf, ova, and docker.",
-							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -437,7 +437,7 @@ func schema_k_orc_openstack_resource_controller_api_v1alpha1_ImageContent(ref co
 						},
 					},
 				},
-				Required: []string{"containerFormat", "diskFormat", "sourceType"},
+				Required: []string{"diskFormat", "sourceType"},
 			},
 			VendorExtensible: spec.VendorExtensible{
 				Extensions: spec.Extensions{
@@ -855,16 +855,21 @@ func schema_k_orc_openstack_resource_controller_api_v1alpha1_ImageSpec(ref commo
 					},
 					"resource": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Resource specifies the desired state of the glance image.\n\nResource may not be specified if the management policy is `unmanaged`.\n\nResource must be specified when the management policy is `managed` or `detachOnDelete`.",
+							Description: "Resource specifies the desired state of the glance image.\n\nResource may not be specified if the management policy is `unmanaged`.\n\nResource must be specified when the management policy is `managed`.",
 							Ref:         ref("github.com/k-orc/openstack-resource-controller/api/v1alpha1.ImageResourceSpec"),
 						},
 					},
 					"managementPolicy": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ManagementPolicy defines how ORC will treat the object. Valid values are `managed`: ORC will create, update, and delete the resource; `unmanaged`: ORC will import an existing image, and will not apply updates to it or delete it; `detachOnDelete`: identical to `managed`, but ORC will not delete the OpenStack resource when the ORC object is deleted.",
-							Default:     "",
+							Description: "ManagementPolicy defines how ORC will treat the object. Valid values are `managed`: ORC will create, update, and delete the resource; `unmanaged`: ORC will import an existing image, and will not apply updates to it or delete it.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"managedOptions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ManagedOptions specifies options which may be applied to managed objects.",
+							Ref:         ref("github.com/k-orc/openstack-resource-controller/api/v1alpha1.ManagedOptions"),
 						},
 					},
 					"cloudCredentialsRef": {
@@ -879,7 +884,7 @@ func schema_k_orc_openstack_resource_controller_api_v1alpha1_ImageSpec(ref commo
 			},
 		},
 		Dependencies: []string{
-			"github.com/k-orc/openstack-resource-controller/api/v1alpha1.CloudCredentialsReference", "github.com/k-orc/openstack-resource-controller/api/v1alpha1.ImageImport", "github.com/k-orc/openstack-resource-controller/api/v1alpha1.ImageResourceSpec"},
+			"github.com/k-orc/openstack-resource-controller/api/v1alpha1.CloudCredentialsReference", "github.com/k-orc/openstack-resource-controller/api/v1alpha1.ImageImport", "github.com/k-orc/openstack-resource-controller/api/v1alpha1.ImageResourceSpec", "github.com/k-orc/openstack-resource-controller/api/v1alpha1.ManagedOptions"},
 	}
 }
 
@@ -939,6 +944,25 @@ func schema_k_orc_openstack_resource_controller_api_v1alpha1_ImageStatus(ref com
 		},
 		Dependencies: []string{
 			"github.com/k-orc/openstack-resource-controller/api/v1alpha1.ImageResourceStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.Condition"},
+	}
+}
+
+func schema_k_orc_openstack_resource_controller_api_v1alpha1_ManagedOptions(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"deletePolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DeletePolicy specified the behaviour of the controller when the ORC object is deleted. Options are `delete` - delete the OpenStack resource; `detach` - do not delete the OpenStack resource. If not specified, the default is `delete`.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

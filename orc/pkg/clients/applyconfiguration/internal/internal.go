@@ -77,7 +77,6 @@ var schemaYAML = typed.YAMLObject(`types:
     - name: containerFormat
       type:
         scalar: string
-      default: ""
     - name: diskFormat
       type:
         scalar: string
@@ -228,10 +227,12 @@ var schemaYAML = typed.YAMLObject(`types:
     - name: import
       type:
         namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageImport
+    - name: managedOptions
+      type:
+        namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ManagedOptions
     - name: managementPolicy
       type:
         scalar: string
-      default: ""
     - name: resource
       type:
         namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageResourceSpec
@@ -255,6 +256,12 @@ var schemaYAML = typed.YAMLObject(`types:
     - name: resource
       type:
         namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageResourceStatus
+- name: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ManagedOptions
+  map:
+    fields:
+    - name: deletePolicy
+      type:
+        scalar: string
 - name: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
   map:
     fields:

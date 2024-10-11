@@ -16,8 +16,8 @@ spec:
   versions:
   - additionalPrinterColumns:
     - description: Glance image ID
-      jsonPath: .status.imageID
-      name: ImageID
+      jsonPath: .status.id
+      name: ID
       type: string
     - description: Availability status of image
       jsonPath: .status.conditions[?(@.type=='Available')].status
@@ -107,26 +107,43 @@ spec:
                     format: uuid
                     type: string
                 type: object
+              managedOptions:
+                description: ManagedOptions specifies options which may be applied
+                  to managed objects.
+                properties:
+                  deletePolicy:
+                    default: delete
+                    description: |-
+                      DeletePolicy specified the behaviour of the controller when the ORC
+                      object is deleted. Options are `delete` - delete the OpenStack resource;
+                      `detach` - do not delete the OpenStack resource. If not specified, the
+                      default is `delete`.
+                    enum:
+                    - delete
+                    - detach
+                    type: string
+                type: object
               managementPolicy:
                 default: managed
                 description: |-
                   ManagementPolicy defines how ORC will treat the object. Valid values are
                   `managed`: ORC will create, update, and delete the resource; `unmanaged`:
                   ORC will import an existing image, and will not apply updates to it or
-                  delete it; `detachOnDelete`: identical to `managed`, but ORC will not
-                  delete the OpenStack resource when the ORC object is deleted.
+                  delete it.
                 enum:
                 - managed
                 - unmanaged
-                - deleteOnDetach
                 type: string
+                x-kubernetes-validations:
+                - message: managementPolicy is immutable
+                  rule: self == oldSelf
               resource:
                 description: |-
                   Resource specifies the desired state of the glance image.
 
                   Resource may not be specified if the management policy is `unmanaged`.
 
-                  Resource must be specified when the management policy is `managed` or `detachOnDelete`.
+                  Resource must be specified when the management policy is `managed`.
                 properties:
                   content:
                     description: Content specifies how to obtain the image content.
@@ -438,16 +455,18 @@ spec:
             type: object
             x-kubernetes-validations:
             - message: resource must be specified when policy is managed
-              rule: 'self.managementPolicy != ''unmanaged'' ? has(self.resource) :
-                true'
+              rule: 'self.managementPolicy == ''managed'' ? has(self.resource) : true'
             - message: import may not be specified when policy is managed
-              rule: 'self.managementPolicy != ''unmanaged'' ? !has(self.__import__)
+              rule: 'self.managementPolicy == ''managed'' ? !has(self.__import__)
                 : true'
             - message: resource may not be specified when policy is unmanaged
               rule: 'self.managementPolicy == ''unmanaged'' ? !has(self.resource)
                 : true'
             - message: import must be specified when policy is unmanaged
               rule: 'self.managementPolicy == ''unmanaged'' ? has(self.__import__)
+                : true'
+            - message: managedOptions may only be provided when policy is managed
+              rule: 'has(self.managedOptions) ? self.managementPolicy == ''managed''
                 : true'
             - message: resource content must be specified when not importing
               rule: '!has(self.__import__) ? has(self.resource.content) : true'

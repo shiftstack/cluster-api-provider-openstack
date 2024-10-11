@@ -181,6 +181,26 @@ var _ = Describe("ORC Image API validations", func() {
 		Expect(applyObj(ctx, image, patch)).NotTo(Succeed())
 	})
 
+	It("should not permit managedOptions for unmanaged", func(ctx context.Context) {
+		image := imageStub("image")
+		patch := basePatch(image)
+		patch.Spec.
+			WithImport(testImport()).
+			WithManagementPolicy(orcv1alpha1.ManagementPolicyUnmanaged).
+			WithManagedOptions(applyconfigv1alpha1.ManagedOptions().
+				WithDeletePolicy(orcv1alpha1.DeletePolicyDetach))
+		Expect(applyObj(ctx, image, patch)).NotTo(Succeed())
+	})
+
+	It("should permit managedOptions for managed", func(ctx context.Context) {
+		image := imageStub("image")
+		patch := minimalManagedPatch(image)
+		patch.Spec.
+			WithManagedOptions(applyconfigv1alpha1.ManagedOptions().
+				WithDeletePolicy(orcv1alpha1.DeletePolicyDetach))
+		Expect(applyObj(ctx, image, patch)).To(Succeed())
+	})
+
 	DescribeTable("should permit containerFormat",
 		func(ctx context.Context, containerFormat orcv1alpha1.ImageContainerFormat) {
 			image := imageStub("image")
