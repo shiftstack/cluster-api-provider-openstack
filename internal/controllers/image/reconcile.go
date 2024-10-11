@@ -90,6 +90,12 @@ func (r *orcImageReconciler) reconcileNormal(ctx context.Context, orcImage *orcv
 		}
 
 		err = errors.Join(err, r.updateStatus(ctx, orcImage, statusOpts...))
+
+		var terminalError *capoerrors.TerminalError
+		if errors.As(err, &terminalError) {
+			log.Error(err, "not scheduling further reconciles for terminal error")
+			err = nil
+		}
 	}()
 
 	imageClient, err := r.getImageClient(ctx, orcImage)
