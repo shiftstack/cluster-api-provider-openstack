@@ -44,6 +44,14 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/k-orc/openstack-resource-controller/api/v1alpha1.ImageSpec":                  schema_k_orc_openstack_resource_controller_api_v1alpha1_ImageSpec(ref),
 		"github.com/k-orc/openstack-resource-controller/api/v1alpha1.ImageStatus":                schema_k_orc_openstack_resource_controller_api_v1alpha1_ImageStatus(ref),
 		"github.com/k-orc/openstack-resource-controller/api/v1alpha1.ManagedOptions":             schema_k_orc_openstack_resource_controller_api_v1alpha1_ManagedOptions(ref),
+		"github.com/k-orc/openstack-resource-controller/api/v1alpha1.Network":                    schema_k_orc_openstack_resource_controller_api_v1alpha1_Network(ref),
+		"github.com/k-orc/openstack-resource-controller/api/v1alpha1.NetworkFilter":              schema_k_orc_openstack_resource_controller_api_v1alpha1_NetworkFilter(ref),
+		"github.com/k-orc/openstack-resource-controller/api/v1alpha1.NetworkImport":              schema_k_orc_openstack_resource_controller_api_v1alpha1_NetworkImport(ref),
+		"github.com/k-orc/openstack-resource-controller/api/v1alpha1.NetworkList":                schema_k_orc_openstack_resource_controller_api_v1alpha1_NetworkList(ref),
+		"github.com/k-orc/openstack-resource-controller/api/v1alpha1.NetworkResourceSpec":        schema_k_orc_openstack_resource_controller_api_v1alpha1_NetworkResourceSpec(ref),
+		"github.com/k-orc/openstack-resource-controller/api/v1alpha1.NetworkResourceStatus":      schema_k_orc_openstack_resource_controller_api_v1alpha1_NetworkResourceStatus(ref),
+		"github.com/k-orc/openstack-resource-controller/api/v1alpha1.NetworkSpec":                schema_k_orc_openstack_resource_controller_api_v1alpha1_NetworkSpec(ref),
+		"github.com/k-orc/openstack-resource-controller/api/v1alpha1.NetworkStatus":              schema_k_orc_openstack_resource_controller_api_v1alpha1_NetworkStatus(ref),
 		"k8s.io/api/core/v1.AWSElasticBlockStoreVolumeSource":                                    schema_k8sio_api_core_v1_AWSElasticBlockStoreVolumeSource(ref),
 		"k8s.io/api/core/v1.Affinity":                                    schema_k8sio_api_core_v1_Affinity(ref),
 		"k8s.io/api/core/v1.AppArmorProfile":                             schema_k8sio_api_core_v1_AppArmorProfile(ref),
@@ -940,6 +948,294 @@ func schema_k_orc_openstack_resource_controller_api_v1alpha1_ManagedOptions(ref 
 				},
 			},
 		},
+	}
+}
+
+func schema_k_orc_openstack_resource_controller_api_v1alpha1_Network(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Network is the Schema for the ORC networks API.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/k-orc/openstack-resource-controller/api/v1alpha1.ImageSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/k-orc/openstack-resource-controller/api/v1alpha1.ImageStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/k-orc/openstack-resource-controller/api/v1alpha1.ImageSpec", "github.com/k-orc/openstack-resource-controller/api/v1alpha1.ImageStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_k_orc_openstack_resource_controller_api_v1alpha1_NetworkFilter(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NetworkFilter identifies a resource to import",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name specifies the name of the resource to import",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_k_orc_openstack_resource_controller_api_v1alpha1_NetworkImport(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NetworkImport specifies an existing resource which will be imported instead of creating a new one",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"id": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ID contains the unique identifier of an existing resource. Note that when specifying an import by ID, the resource MUST already exist. This object will enter an error state if the resource does not exist.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"filter": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Filter contains a query which is expected to return a single result. The controller will continue to retry if filter returns no results. If filter returns multiple results the controller will set an error state and will not continue to retry.",
+							Ref:         ref("github.com/k-orc/openstack-resource-controller/api/v1alpha1.NetworkFilter"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/k-orc/openstack-resource-controller/api/v1alpha1.NetworkFilter"},
+	}
+}
+
+func schema_k_orc_openstack_resource_controller_api_v1alpha1_NetworkList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NetworkList contains a list of Image.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/k-orc/openstack-resource-controller/api/v1alpha1.Image"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/k-orc/openstack-resource-controller/api/v1alpha1.Image", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_k_orc_openstack_resource_controller_api_v1alpha1_NetworkResourceSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"description": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_k_orc_openstack_resource_controller_api_v1alpha1_NetworkResourceStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NetworkResourceStatus represents the observed state of the OpenStack resource",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the resource name as reported by the OpenStack API",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_k_orc_openstack_resource_controller_api_v1alpha1_NetworkSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NetworkSpec defines the desired state of the resource.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"import": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Import refers to an existing resource which will be imported instead of creating a new one.",
+							Ref:         ref("github.com/k-orc/openstack-resource-controller/api/v1alpha1.NetworkImport"),
+						},
+					},
+					"resource": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resource specifies the desired state of the OpenStack resource.\n\nResource may not be specified if the management policy is `unmanaged`.\n\nResource must be specified when the management policy is `managed`.",
+							Ref:         ref("github.com/k-orc/openstack-resource-controller/api/v1alpha1.NetworkResourceSpec"),
+						},
+					},
+					"managementPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ManagementPolicy defines how ORC will treat the object. Valid values are `managed`: ORC will create, update, and delete the resource; `unmanaged`: ORC will import an existing image, and will not apply updates to it or delete it.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"managedOptions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ManagedOptions specifies options which may be applied to managed objects.",
+							Ref:         ref("github.com/k-orc/openstack-resource-controller/api/v1alpha1.ManagedOptions"),
+						},
+					},
+					"cloudCredentialsRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CloudCredentialsRef points to a secret containing OpenStack credentials",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/k-orc/openstack-resource-controller/api/v1alpha1.CloudCredentialsReference"),
+						},
+					},
+				},
+				Required: []string{"cloudCredentialsRef"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/k-orc/openstack-resource-controller/api/v1alpha1.CloudCredentialsReference", "github.com/k-orc/openstack-resource-controller/api/v1alpha1.ManagedOptions", "github.com/k-orc/openstack-resource-controller/api/v1alpha1.NetworkImport", "github.com/k-orc/openstack-resource-controller/api/v1alpha1.NetworkResourceSpec"},
+	}
+}
+
+func schema_k_orc_openstack_resource_controller_api_v1alpha1_NetworkStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NetworkStatus defines the observed state of an Image.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"conditions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-map-keys": []interface{}{
+									"type",
+								},
+								"x-kubernetes-list-type":       "map",
+								"x-kubernetes-patch-merge-key": "type",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Conditions represents the observed status of the object. Known .status.conditions.type are: \"Available\", \"Progressing\"\n\nAvailable represents the availability of the glance image. If it is true then the image is ready for use in glance, and its hash has been verified.\n\nProgressing indicates the state of the glance image does not currently reflect the desired state, but that reconciliation is progressing. Progressing will be False either because the desired state has been achieved, or some terminal error prevents it from being achieved and the controller is no longer attempting to reconcile.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.Condition"),
+									},
+								},
+							},
+						},
+					},
+					"id": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ID is the unique identifier of the resource in OpenStack",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"resource": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resource contains the observed state of the resource",
+							Ref:         ref("github.com/k-orc/openstack-resource-controller/api/v1alpha1.NetworkResourceStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/k-orc/openstack-resource-controller/api/v1alpha1.NetworkResourceStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.Condition"},
 	}
 }
 

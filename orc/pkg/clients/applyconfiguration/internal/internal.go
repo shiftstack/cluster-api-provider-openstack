@@ -249,6 +249,27 @@ var schemaYAML = typed.YAMLObject(`types:
     - name: onDelete
       type:
         scalar: string
+- name: com.github.k-orc.openstack-resource-controller.api.v1alpha1.Network
+  map:
+    fields:
+    - name: apiVersion
+      type:
+        scalar: string
+    - name: kind
+      type:
+        scalar: string
+    - name: metadata
+      type:
+        namedType: io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta
+      default: {}
+    - name: spec
+      type:
+        namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageSpec
+      default: {}
+    - name: status
+      type:
+        namedType: com.github.k-orc.openstack-resource-controller.api.v1alpha1.ImageStatus
+      default: {}
 - name: io.k8s.apimachinery.pkg.apis.meta.v1.Condition
   map:
     fields:
